@@ -72,7 +72,7 @@ public interface ExpressionVisitor<R> {
      * @return The result.
      * @since 3.0.0
      */
-    default R visitDouble(final @NotNull DoubleExpression expression) {
+    default R visitFloat(final @NotNull FloatExpression expression) {
         return visit(expression);
     }
 

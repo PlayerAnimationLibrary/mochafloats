@@ -309,7 +309,7 @@ public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>,
     }
 
     @Override
-    public @NotNull Value visitDouble(final @NotNull DoubleExpression expression) {
+    public @NotNull Value visitFloat(final @NotNull FloatExpression expression) {
         return NumberValue.of(expression.value());
     }
 
