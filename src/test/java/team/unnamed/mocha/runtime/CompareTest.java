@@ -79,19 +79,19 @@ public class CompareTest {
                     float expectedValue = Float.parseFloat(expected);
 
                     // eval expression
-                    final double result = ENGINE.eval(expression);
+                    final float result = ENGINE.eval(expression);
                     Assertions.assertEquals(
                             expectedValue,
-                            (float) result,
+                            result,
                             () -> "Incorrect result for INTERPRETED expression: " + expression
                     );
 
                     // compile and eval expression
                     try {
-                        final double compileResult = ENGINE.compile(expression).evaluate();
+                        final float compileResult = ENGINE.compile(expression).evaluate();
                         Assertions.assertEquals(
                                 expectedValue,
-                                (float) compileResult,
+                                compileResult,
                                 () -> "Incorrect result for COMPILED expression: " + expression
                         );
                     } catch (Throwable e) {

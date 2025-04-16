@@ -66,7 +66,7 @@ public interface ExpressionVisitor<R> {
     }
 
     /**
-     * Evaluate for double expression.
+     * Evaluate for float expression.
      *
      * @param expression The expression.
      * @return The result.
