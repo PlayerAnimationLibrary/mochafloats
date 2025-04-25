@@ -58,10 +58,10 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
             Bytecode.IFLE, //        LTE(700),
             Bytecode.IFGT, //        GT(700),
             Bytecode.IFGE, //        GTE(700),
-            Bytecode.DADD, //        ADD(900),
-            Bytecode.DSUB, //        SUB(900),
-            Bytecode.DMUL, //        MUL(1000),
-            Bytecode.DDIV, //        DIV(1000),
+            Bytecode.FADD, //        ADD(900),
+            Bytecode.FSUB, //        SUB(900),
+            Bytecode.FMUL, //        MUL(1000),
+            Bytecode.FDIV, //        DIV(1000),
             -1, //        ARROW(2000),
             -1, //        NULL_COALESCE(2),
             -1, //        ASSIGN(1),
@@ -69,8 +69,6 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
             Bytecode.IFEQ, //        EQ(500),
             Bytecode.IFNE //        NEQ(500);
     };
-
-    private final ExpressionInterpreter<?> interpreter;
 
     private final ClassPool classPool;
     private final Bytecode bytecode;
@@ -91,10 +89,9 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
      * The type that the current visitor method is expecting
      * to be pushed to the stack.
      */
-    private CtClass expectedType = null;
+    private CtClass expectedType;
 
     MolangCompilingVisitor(final @NotNull FunctionCompileState compileState) {
-        this.interpreter = new ExpressionInterpreter<>(null, compileState.scope());
         this.functionCompileState = compileState;
         this.classPool = compileState.classPool();
         this.bytecode = compileState.bytecode();
@@ -244,7 +241,7 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
                     const_1 = Bytecode.ICONST_1;
                 }
 
-                bytecode.addOpcode(Bytecode.DCMPL); // compare both numbers
+                bytecode.addOpcode(Bytecode.FCMPL); // compare both numbers
                 bytecode.addOpcode(OPCODES_BY_BINARY_EXPRESSION_OP[op.ordinal()]); // branch
                 bytecode.addIndex(7);
                 bytecode.addOpcode(const_0);
@@ -424,7 +421,6 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
 
     @Override
     public @NotNull CompileVisitResult visitTernaryConditional(final @NotNull TernaryConditionalExpression expression) {
-        final Expression conditionExpr = expression.condition();
         final Expression trueExpr = expression.trueExpression();
         final Expression falseExpr = expression.falseExpression();
 
