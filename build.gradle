@@ -79,8 +79,8 @@ publishing {
     }
     publications {
         maven(MavenPublication) {
-            groupId = "com.zigythebird.mocha"
-            artifactId = "mocha_for_player_anim_lib-$version"
+            groupId = "com.zigythebird"
+            artifactId = "mochafloats"
             version = project.version
             from components.java
         }
