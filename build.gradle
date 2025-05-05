@@ -1,0 +1,85 @@
+plugins {
+    id "java-library"
+    id "maven-publish"
+    id("org.cadixdev.licenser") version "0.6.1"
+    id("me.champeau.jmh") version "0.7.2"
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        url = uri("https://maven.pkg.github.com/bedrockk/MoLang")
+        credentials {
+            username = project.findProperty("gpr.user") as String ?: System.getenv("USERNAME")
+            password = project.findProperty("gpr.key") as String ?: System.getenv("TOKEN")
+        }
+    }
+    maven { url = "https://maven.blamejared.com/"} // moonflower's molang-compiler
+}
+
+dependencies {
+    api("org.javassist:javassist:3.30.2-GA")
+    compileOnlyApi("org.jetbrains:annotations:24.1.0")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.3")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine")
+
+    // performance comparison with other libraries
+    jmhImplementation("com.bedrockk:molang:1.0-SNAPSHOT")
+    jmhImplementation("gg.moonflower:molang-compiler:3.1.1.19")
+}
+
+tasks.register("generateExpectations") {
+    exec {
+        commandLine 'node', 'scripts/generate_expectations.js'
+    }
+}
+
+tasks {
+    test {
+        useJUnitPlatform()
+        dependsOn tasks.generateExpectations
+    }
+    compileJmhJava {
+        sourceCompatibility = "17"
+        targetCompatibility = "17"
+    }
+    compileJava {
+        sourceCompatibility = "8"
+        targetCompatibility = "8"
+    }
+}
+
+license {
+    header.set(rootProject.resources.text.fromFile("header.txt"))
+    include("**/*.java")
+    newLine = false
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(17))
+    }
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "zigythebirdmods"
+            url = "https://maven.zigythebird.com/mods"
+            credentials(PasswordCredentials)
+            authentication {
+                basic(BasicAuthentication)
+            }
+        }
+    }
+    publications {
+        maven(MavenPublication) {
+            groupId = "com.zigythebird.mocha"
+            artifactId = "mocha_for_player_anim_lib-$version"
+            version = project.version
+            from components.java
+        }
+    }
+}
