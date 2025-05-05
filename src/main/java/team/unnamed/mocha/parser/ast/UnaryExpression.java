@@ -84,7 +84,7 @@ public final class UnaryExpression implements Expression {
 
     @Override
     public String toString() {
-        return "Unary(" + op + ")(" + expression + ")";
+        return String.format("%s(%s)", op, expression);
     }
 
     @Override
@@ -104,9 +104,19 @@ public final class UnaryExpression implements Expression {
     }
 
     public enum Op {
-        LOGICAL_NEGATION,
-        ARITHMETICAL_NEGATION,
-        RETURN
-    }
+        LOGICAL_NEGATION("!"),
+        ARITHMETICAL_NEGATION("-"),
+        RETURN("return ");
 
+        private final String string;
+
+        Op(String string) {
+            this.string = string;
+        }
+
+        @Override
+        public String toString() {
+            return this.string;
+        }
+    }
 }

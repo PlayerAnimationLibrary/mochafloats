@@ -109,7 +109,7 @@ public final class BinaryExpression implements Expression {
 
     @Override
     public String toString() {
-        return op.name() + "(" + left + ", " + right + ")";
+        return String.format("%s %s %s", this.left, this.op.toString(), this.right);
     }
 
     @Override
@@ -131,26 +131,28 @@ public final class BinaryExpression implements Expression {
     }
 
     public enum Op {
-        AND(300),
-        OR(200),
-        LT(700),
-        LTE(700),
-        GT(700),
-        GTE(700),
-        ADD(900),
-        SUB(900),
-        MUL(1000),
-        DIV(1000),
-        ARROW(2000),
-        NULL_COALESCE(2),
-        ASSIGN(1),
-        CONDITIONAL(1),
-        EQ(500),
-        NEQ(500);
+        AND("&&", 300),
+        OR("||", 200),
+        LT("<", 700),
+        LTE("<=", 700),
+        GT(">", 700),
+        GTE(">=", 700),
+        ADD("+", 900),
+        SUB("-", 900),
+        MUL("*", 1000),
+        DIV("/", 1000),
+        ARROW("->", 2000),
+        NULL_COALESCE("??", 2),
+        ASSIGN("=", 1),
+        CONDITIONAL("?", 1),
+        EQ("==", 500),
+        NEQ("!=", 500);
 
+        private final String string;
         private final int precedence;
 
-        Op(final int precedence) {
+        Op(String string, final int precedence) {
+            this.string = string;
             this.precedence = precedence;
         }
 
@@ -159,6 +161,10 @@ public final class BinaryExpression implements Expression {
             return precedence;
         }
 
+        @Override
+        public String toString() {
+            return this.string;
+        }
     }
 
 }

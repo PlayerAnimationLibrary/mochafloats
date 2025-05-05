@@ -85,7 +85,7 @@ public final class AccessExpression implements Expression {
 
     @Override
     public String toString() {
-        return "Access(" + object + ", " + property + ")";
+        return String.format("%s.%s", object, property);
     }
 
     @Override

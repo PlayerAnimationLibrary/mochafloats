@@ -75,7 +75,7 @@ public final class FloatExpression implements Expression {
 
     @Override
     public String toString() {
-        return "Float(" + value + ")";
+        return String.valueOf(value);
     }
 
     @Override

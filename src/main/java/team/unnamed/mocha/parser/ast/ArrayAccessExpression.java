@@ -97,7 +97,7 @@ public final class ArrayAccessExpression implements Expression {
 
     @Override
     public @NotNull String toString() {
-        return "ArrayAccess(" + array + ", " + index + ")";
+        return String.format("%s[%s]", array, index);
     }
 
     @Override

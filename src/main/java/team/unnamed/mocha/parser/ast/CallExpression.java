@@ -24,6 +24,7 @@
 package team.unnamed.mocha.parser.ast;
 
 import org.jetbrains.annotations.NotNull;
+import team.unnamed.mocha.util.ExpressionListUtils;
 
 import java.util.List;
 
@@ -82,7 +83,7 @@ public final class CallExpression implements Expression {
 
     @Override
     public String toString() {
-        return "Call(" + function + ", " + arguments + ")";
+        return String.format("%s(%s)", function, ExpressionListUtils.toString(this.arguments, ", ", ""));
     }
 
     @Override

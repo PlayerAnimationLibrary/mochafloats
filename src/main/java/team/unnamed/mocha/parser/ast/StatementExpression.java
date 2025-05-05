@@ -59,6 +59,10 @@ public final class StatementExpression implements Expression {
         return visitor.visitStatement(this);
     }
 
+    @Override
+    public String toString() {
+        return op.toString();
+    }
 
     /**
      * Enum containing all the possible operations/types
@@ -72,14 +76,25 @@ public final class StatementExpression implements Expression {
          *
          * @since 3.0.0
          */
-        BREAK,
+        BREAK("break"),
 
         /**
          * The continue statement type
          *
          * @since 3.0.0
          */
-        CONTINUE
+        CONTINUE("continue");
+
+        private final String string;
+
+        Op(String string) {
+            this.string = string;
+        }
+
+        @Override
+        public String toString() {
+            return this.string;
+        }
     }
 
 }

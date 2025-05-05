@@ -57,9 +57,10 @@ public final class StringExpression implements Expression {
     public <R> R visit(final @NotNull ExpressionVisitor<R> visitor) {
         return visitor.visitString(this);
     }
+
     @Override
     public String toString() {
-        return "String('" + value + "')";
+        return String.format("'%s'", value);
     }
 
     @Override

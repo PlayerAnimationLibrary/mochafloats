@@ -24,6 +24,7 @@
 package team.unnamed.mocha.parser.ast;
 
 import org.jetbrains.annotations.NotNull;
+import team.unnamed.mocha.util.ExpressionListUtils;
 
 import java.util.List;
 import java.util.Objects;
@@ -61,7 +62,7 @@ public final class ExecutionScopeExpression implements Expression {
 
     @Override
     public String toString() {
-        return "ExecutionScope(" + this.expressions + ")";
+        return String.format("{ %s }", ExpressionListUtils.toString(this.expressions));
     }
 
     @Override
