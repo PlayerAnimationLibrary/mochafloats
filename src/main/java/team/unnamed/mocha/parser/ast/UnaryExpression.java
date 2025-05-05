@@ -84,7 +84,7 @@ public final class UnaryExpression implements Expression {
 
     @Override
     public String toString() {
-        return String.format("%s(%s)", op, expression);
+        return String.format("%s%s", op, expression);
     }
 
     @Override

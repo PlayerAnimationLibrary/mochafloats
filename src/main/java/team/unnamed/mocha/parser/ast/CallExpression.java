@@ -83,7 +83,7 @@ public final class CallExpression implements Expression {
 
     @Override
     public String toString() {
-        return String.format("%s(%s)", function, ExpressionListUtils.toString(this.arguments, ", ", ""));
+        return String.format("%s(%s)", function, ExpressionListUtils.toString(this.arguments, ","));
     }
 
     @Override

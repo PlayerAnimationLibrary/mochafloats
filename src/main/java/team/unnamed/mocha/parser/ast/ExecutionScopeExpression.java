@@ -62,7 +62,7 @@ public final class ExecutionScopeExpression implements Expression {
 
     @Override
     public String toString() {
-        return String.format("{ %s }", ExpressionListUtils.toString(this.expressions));
+        return String.format("{%s}", ExpressionListUtils.toString(this.expressions));
     }
 
     @Override

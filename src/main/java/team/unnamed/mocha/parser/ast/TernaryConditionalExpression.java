@@ -121,7 +121,7 @@ public final class TernaryConditionalExpression implements Expression {
 
     @Override
     public String toString() {
-        return String.format("(%s) ? (%s) : (%s)", conditional, trueExpression, falseExpression);
+        return String.format("%s?%s:%s", conditional, trueExpression, falseExpression);
     }
 
     @Override

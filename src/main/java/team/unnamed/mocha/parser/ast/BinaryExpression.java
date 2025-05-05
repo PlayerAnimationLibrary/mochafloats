@@ -109,7 +109,7 @@ public final class BinaryExpression implements Expression {
 
     @Override
     public String toString() {
-        return String.format("%s %s %s", this.left, this.op.toString(), this.right);
+        return String.format("(%s%s%s)", this.left, this.op.toString(), this.right);
     }
 
     @Override

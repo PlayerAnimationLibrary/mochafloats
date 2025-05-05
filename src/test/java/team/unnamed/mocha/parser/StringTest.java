@@ -65,5 +65,7 @@ public class StringTest {
                   (v.x > 5) ? continue;
                   v.x = v.x + 1;
                 });""");
+
+        testToString("-(10 * 5)");
     }
 }

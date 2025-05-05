@@ -30,10 +30,10 @@ import java.util.stream.Collectors;
 
 public class ExpressionListUtils {
     public static String toString(List<Expression> expressions) {
-        return toString(expressions, "; ", ";");
+        return toString(expressions, ";");
     }
 
-    public static String toString(List<Expression> expressions, CharSequence delimiter, CharSequence suffix) {
-        return expressions.stream().map(Expression::toString).collect(Collectors.joining(delimiter, "", suffix));
+    public static String toString(List<Expression> expressions, CharSequence delimiter) {
+        return expressions.stream().map(Expression::toString).collect(Collectors.joining(delimiter));
     }
 }
