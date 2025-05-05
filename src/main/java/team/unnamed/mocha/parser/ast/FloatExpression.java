@@ -25,8 +25,6 @@ package team.unnamed.mocha.parser.ast;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Objects;
-
 /**
  * Literal float expression implementation for Molang
  * numerical values.
@@ -75,6 +73,9 @@ public final class FloatExpression implements Expression {
 
     @Override
     public String toString() {
+        if ((int)value == value) {
+            return String.valueOf((int)value);
+        }
         return String.valueOf(value);
     }
 
@@ -88,7 +89,7 @@ public final class FloatExpression implements Expression {
 
     @Override
     public int hashCode() {
-        return Objects.hash(value);
+        return Float.hashCode(value);
     }
 
 }
