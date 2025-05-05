@@ -56,15 +56,19 @@ final class MolangParserImpl implements MolangParser {
     // to be parsed, e.g. literals, statements, identifiers,
     // wrapped expressions and execution scopes
     //
-    static @NotNull Expression parseSingle(final @NotNull MolangLexer lexer) throws IOException {
+    static @Nullable Expression parseSingle(final @NotNull MolangLexer lexer) throws IOException {
         Token token = lexer.current();
         switch (token.kind()) {
             case FLOAT:
                 lexer.next();
-                return FloatExpression.of(Float.parseFloat(token.value()));
+                String tokenValue = token.value();
+                if (tokenValue == null) return null;
+                return FloatExpression.of(Float.parseFloat(tokenValue));
             case STRING:
                 lexer.next();
-                return new StringExpression(token.value());
+                String tvalue = token.value();
+                if (tvalue == null) return null;
+                return new StringExpression(tvalue);
             case TRUE:
                 lexer.next();
                 return FloatExpression.ONE;
@@ -85,7 +89,8 @@ final class MolangParserImpl implements MolangParser {
                 lexer.next();
                 List<Expression> expressions = new ArrayList<>();
                 while (true) {
-                    expressions.add(MolangParserImpl.parseCompoundExpression(lexer, 0));
+                    Expression compoundExpression = MolangParserImpl.parseCompoundExpression(lexer, 0);
+                    if (compoundExpression != null) expressions.add(compoundExpression);
                     token = lexer.current();
                     if (token.kind() == TokenKind.RBRACE) {
                         lexer.next();
@@ -110,7 +115,9 @@ final class MolangParserImpl implements MolangParser {
                 lexer.next();
                 return new StatementExpression(StatementExpression.Op.CONTINUE);
             case IDENTIFIER:
-                Expression expr = new IdentifierExpression(token.value());
+                String tovalue = token.value();
+                if (tovalue == null) return null;
+                Expression expr = new IdentifierExpression(tovalue);
                 token = lexer.next();
                 while (token.kind() == TokenKind.DOT) {
                     token = lexer.next();
@@ -119,7 +126,10 @@ final class MolangParserImpl implements MolangParser {
                         throw new ParseException("Unexpected token, expected a valid field token", lexer.cursor());
                     }
 
-                    expr = new AccessExpression(expr, token.value());
+                    String tokvalue = token.value();
+                    if (tokvalue != null) {
+                        expr = new AccessExpression(expr, tokvalue);
+                    }
                     token = lexer.next();
                 }
                 return expr;
@@ -129,24 +139,30 @@ final class MolangParserImpl implements MolangParser {
                 if (operatedExpression instanceof FloatExpression) {
                     // NEGATE(A) is just parsed as (-A)
                     return FloatExpression.of(-((FloatExpression) operatedExpression).value());
+                } else if (operatedExpression != null) {
+                    return new UnaryExpression(UnaryExpression.Op.ARITHMETICAL_NEGATION, operatedExpression);
                 }
-                return new UnaryExpression(UnaryExpression.Op.ARITHMETICAL_NEGATION, operatedExpression);
             case BANG:
                 lexer.next();
-                return new UnaryExpression(UnaryExpression.Op.LOGICAL_NEGATION, parseSingle(lexer));
+                Expression unaryExpr = parseSingle(lexer);
+                if (unaryExpr == null) return null;
+                return new UnaryExpression(UnaryExpression.Op.LOGICAL_NEGATION, unaryExpr);
             case RETURN:
                 lexer.next();
-                return new UnaryExpression(UnaryExpression.Op.RETURN, MolangParserImpl.parseCompoundExpression(lexer, 0));
+                Expression compoundExpression = MolangParserImpl.parseCompoundExpression(lexer, 0);
+                if (compoundExpression == null) return null;
+                return new UnaryExpression(UnaryExpression.Op.RETURN, compoundExpression);
         }
 
-        return FloatExpression.ZERO;
+        return null;
     }
 
-    static @NotNull Expression parseCompoundExpression(
+    static @Nullable Expression parseCompoundExpression(
             final @NotNull MolangLexer lexer,
             final int lastPrecedence
     ) throws IOException {
         Expression expr = parseSingle(lexer);
+        if (expr == null) return null;
         while (true) {
             final Expression compoundExpr = parseCompound(lexer, expr, lastPrecedence);
 
@@ -163,9 +179,9 @@ final class MolangParserImpl implements MolangParser {
         }
     }
 
-    static @NotNull Expression parseCompound(
+    static @Nullable Expression parseCompound(
             final @NotNull MolangLexer lexer,
-            final @NotNull Expression left,
+            final @Nullable Expression left,
             final int lastPrecedence
     ) throws IOException {
         Token current = lexer.current();
@@ -192,6 +208,7 @@ final class MolangParserImpl implements MolangParser {
                 }
 
                 lexer.next();
+                if (index == null || left == null) return null;
                 return new ArrayAccessExpression(left, index);
             }
             case LPAREN: { // CALL EXPRESSION: "left("
@@ -225,6 +242,7 @@ final class MolangParserImpl implements MolangParser {
                     }
                 }
 
+                if (left == null) return null;
                 return new CallExpression(left, arguments);
             }
             case QUES: {
@@ -240,8 +258,12 @@ final class MolangParserImpl implements MolangParser {
                 if (lexer.current().kind() == TokenKind.COLON) {
                     // then it's a ternary expression, since there is a ':', indicating the next expression
                     lexer.next();
-                    return new TernaryConditionalExpression(left, trueValue, MolangParserImpl.parseCompoundExpression(lexer, ternaryPrecedence));
+                    if (trueValue == null) return null;
+                    Expression compoundExpression = MolangParserImpl.parseCompoundExpression(lexer, ternaryPrecedence);
+                    if (compoundExpression == null || left == null) return null;
+                    return new TernaryConditionalExpression(left, trueValue, compoundExpression);
                 } else {
+                    if (trueValue == null || left == null) return null;
                     return new BinaryExpression(BinaryExpression.Op.CONDITIONAL, left, trueValue);
                 }
             }
@@ -278,7 +300,9 @@ final class MolangParserImpl implements MolangParser {
         }
 
         lexer.next();
-        return new BinaryExpression(op, left, MolangParserImpl.parseCompoundExpression(lexer, precedence));
+        Expression compoundExpression = MolangParserImpl.parseCompoundExpression(lexer, precedence);
+        if (compoundExpression == null || left == null) return null;
+        return new BinaryExpression(op, left, compoundExpression);
     }
 
     @Override
