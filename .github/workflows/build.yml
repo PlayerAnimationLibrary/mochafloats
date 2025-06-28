@@ -29,3 +29,5 @@ jobs:
             - name: Build
               run: |
                   ./gradlew publish
+              env:
+                  MAVEN_PASSWORD: ${{ secrets.REDLANCE_PASSWORD }}
