@@ -38,6 +38,7 @@ class DoubleParseTest {
         assertCreateTree("1.0", FloatExpression.of(1D));
         assertCreateTree("3.14", FloatExpression.of(3.14D));
         assertCreateTree("5.8", FloatExpression.of(5.8D));
+        assertCreateTree("3.933287E-14", FloatExpression.of(3.933287E-14F));
 
         // these are not valid doubles and are parsed as identifiers
         assertCreateTree("Infinity", new IdentifierExpression("Infinity"));

@@ -67,5 +67,6 @@ public class StringTest {
                 });""");
 
         testToString("-(10 * 5)");
+        testToString("3.933287E-14");
     }
 }

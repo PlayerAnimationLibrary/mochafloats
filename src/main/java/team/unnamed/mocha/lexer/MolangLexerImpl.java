@@ -106,6 +106,24 @@ final class MolangLexerImpl implements MolangLexer {
                 }
             }
 
+            if (c == 'e' || c == 'E') {
+                builder.appendCodePoint(c);
+                c = read();
+
+                if (c == '+' || c == '-') {
+                    builder.appendCodePoint(c);
+                    c = read();
+                }
+
+                if (!Character.isDigit(c)) {
+                    return new Token(TokenKind.ERROR, "Malformed floating point literal", start, cursor.index());
+                }
+
+                do {
+                    builder.appendCodePoint(c);
+                } while (Character.isDigit(c = read()));
+            }
+
             return new Token(TokenKind.FLOAT, builder.toString(), start, cursor.index());
         } else if (Characters.isValidForWordStart(c)) { // [A-z_]
             // may be an identifier or a keyword
