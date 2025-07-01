@@ -8,16 +8,13 @@ plugins {
 repositories {
     mavenCentral()
     maven {
-        url = uri("https://maven.pkg.github.com/bedrockk/MoLang")
-        credentials {
-            username = project.findProperty("gpr.user") as String ?: System.getenv("USERNAME")
-            password = project.findProperty("gpr.key") as String ?: System.getenv("TOKEN")
-        }
+        url = uri("https://repo.redlance.org/public") // mirroring https://maven.pkg.github.com/bedrockk/MoLang
     }
     maven { url = "https://maven.blamejared.com/"} // moonflower's molang-compiler
 }
 
 dependencies {
+    implementation api("io.netty:netty-buffer:4.1.115.Final")
     api("org.javassist:javassist:3.30.2-GA")
     compileOnlyApi("org.jetbrains:annotations:24.1.0")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.3")

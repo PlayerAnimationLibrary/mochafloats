@@ -23,6 +23,7 @@
  */
 package team.unnamed.mocha.parser.ast;
 
+import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 
@@ -51,4 +52,5 @@ public interface Expression {
      */
     <R> R visit(final @NotNull ExpressionVisitor<R> visitor);
 
+    void write(ByteBuf buf);
 }

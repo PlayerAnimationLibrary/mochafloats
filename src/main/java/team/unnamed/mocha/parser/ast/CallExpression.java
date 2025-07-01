@@ -23,7 +23,9 @@
  */
 package team.unnamed.mocha.parser.ast;
 
+import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.NotNull;
+import team.unnamed.mocha.util.ExprBytesUtils;
 import team.unnamed.mocha.util.ExpressionListUtils;
 
 import java.util.List;
@@ -42,6 +44,13 @@ import static java.util.Objects.requireNonNull;
 public final class CallExpression implements Expression {
     private final List<Expression> arguments;
     private Expression function;
+
+    public CallExpression(ByteBuf buf) {
+        this(
+                ExprBytesUtils.readExpression(buf),
+                ExprBytesUtils.readList(buf, ExprBytesUtils::readExpression)
+        );
+    }
 
     public CallExpression(final @NotNull Expression function, final @NotNull List<Expression> arguments) {
         this.function = requireNonNull(function, "function");
@@ -79,6 +88,12 @@ public final class CallExpression implements Expression {
     @Override
     public <R> R visit(final @NotNull ExpressionVisitor<R> visitor) {
         return visitor.visitCall(this);
+    }
+
+    @Override
+    public void write(ByteBuf buf) {
+        ExprBytesUtils.writeExpression(function(), buf);
+        ExprBytesUtils.writeList(buf, arguments(), ExprBytesUtils::writeExpression);
     }
 
     @Override

@@ -23,9 +23,12 @@
  */
 package team.unnamed.mocha;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import org.jetbrains.annotations.NotNull;
 import team.unnamed.mocha.parser.ParseException;
 import team.unnamed.mocha.parser.ast.Expression;
+import team.unnamed.mocha.util.ExprBytesUtils;
 
 import java.util.Arrays;
 import java.util.List;
@@ -54,6 +57,10 @@ public final class MochaAssertions {
     }
 
     public static void assertCreateTree(final @NotNull String expr, final @NotNull Expression @NotNull ... expressions) {
+        assertCreateTree(expr, Arrays.asList(expressions));
+    }
+
+    public static void assertCreateTree(final @NotNull String expr, final List<Expression> expressions) {
         final MochaEngine<?> engine = MochaEngine.createStandard();
         final List<Expression> parsed;
         try {
@@ -62,11 +69,22 @@ public final class MochaAssertions {
             fail("Failed to parse expression: '" + expr + "'", e);
             return;
         }
+
+        { // Network testing
+            ByteBuf buf = Unpooled.buffer();
+            ExprBytesUtils.writeList(buf, expressions, ExprBytesUtils::writeExpression);
+
+            List<Expression> readed = ExprBytesUtils.readList(buf, ExprBytesUtils::readExpression);
+            buf.release();
+
+            assertEquals(readed, expressions);
+        }
+
         assertEquals(
-                Arrays.asList(expressions),
+                expressions,
                 parsed,
                 () -> "Expression: '" + expr + "' generated unexpected syntax tree:\n\t" +
-                        "- Expected: " + Arrays.toString(expressions) + "\n\t" +
+                        "- Expected: " + expressions + "\n\t" +
                         "- Got: " + parsed
         );
     }

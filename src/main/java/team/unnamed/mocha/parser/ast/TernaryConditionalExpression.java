@@ -23,7 +23,9 @@
  */
 package team.unnamed.mocha.parser.ast;
 
+import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.NotNull;
+import team.unnamed.mocha.util.ExprBytesUtils;
 
 import java.util.Objects;
 
@@ -46,6 +48,14 @@ public final class TernaryConditionalExpression implements Expression {
     private Expression conditional;
     private Expression trueExpression;
     private Expression falseExpression;
+
+    public TernaryConditionalExpression(ByteBuf buf) {
+        this(
+                ExprBytesUtils.readExpression(buf),
+                ExprBytesUtils.readExpression(buf),
+                ExprBytesUtils.readExpression(buf)
+        );
+    }
 
     public TernaryConditionalExpression(final @NotNull Expression conditional, final @NotNull Expression trueExpression, final @NotNull Expression falseExpression) {
         this.conditional = requireNonNull(conditional, "conditional");
@@ -117,6 +127,13 @@ public final class TernaryConditionalExpression implements Expression {
     @Override
     public <R> R visit(final @NotNull ExpressionVisitor<R> visitor) {
         return visitor.visitTernaryConditional(this);
+    }
+
+    @Override
+    public void write(ByteBuf buf) {
+        ExprBytesUtils.writeExpression(conditional, buf);
+        ExprBytesUtils.writeExpression(trueExpression, buf);
+        ExprBytesUtils.writeExpression(falseExpression, buf);
     }
 
     @Override

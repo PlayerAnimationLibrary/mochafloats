@@ -23,6 +23,7 @@
  */
 package team.unnamed.mocha.parser.ast;
 
+import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -39,6 +40,10 @@ public final class FloatExpression implements Expression {
     public static final FloatExpression ONE = new FloatExpression(1.0F);
 
     private final float value;
+
+    public FloatExpression(ByteBuf buf) {
+        this(buf.readFloat());
+    }
 
     private FloatExpression(final float value) {
         this.value = value;
@@ -69,6 +74,11 @@ public final class FloatExpression implements Expression {
     @Override
     public <R> R visit(final @NotNull ExpressionVisitor<R> visitor) {
         return visitor.visitFloat(this);
+    }
+
+    @Override
+    public void write(ByteBuf buf) {
+        buf.writeFloat(value);
     }
 
     @Override

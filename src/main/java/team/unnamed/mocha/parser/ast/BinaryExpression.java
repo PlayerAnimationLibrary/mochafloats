@@ -23,8 +23,10 @@
  */
 package team.unnamed.mocha.parser.ast;
 
+import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
+import team.unnamed.mocha.util.ExprBytesUtils;
 
 import static java.util.Objects.requireNonNull;
 
@@ -41,6 +43,14 @@ public final class BinaryExpression implements Expression {
     private final Op op;
     private Expression left;
     private Expression right;
+
+    public BinaryExpression(ByteBuf buf) {
+        this(
+                ExprBytesUtils.getEnum(Op.values(), buf),
+                ExprBytesUtils.readExpression(buf),
+                ExprBytesUtils.readExpression(buf)
+        );
+    }
 
     public BinaryExpression(final @NotNull Op op, final @NotNull Expression left, final @NotNull Expression right) {
         this.op = requireNonNull(op, "op");
@@ -105,6 +115,13 @@ public final class BinaryExpression implements Expression {
     @Override
     public <R> R visit(final @NotNull ExpressionVisitor<R> visitor) {
         return visitor.visitBinary(this);
+    }
+
+    @Override
+    public void write(ByteBuf buf) {
+        buf.writeByte(op().ordinal());
+        ExprBytesUtils.writeExpression(left(), buf);
+        ExprBytesUtils.writeExpression(right(), buf);
     }
 
     @Override

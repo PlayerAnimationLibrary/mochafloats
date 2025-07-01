@@ -23,7 +23,9 @@
  */
 package team.unnamed.mocha.parser.ast;
 
+import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.NotNull;
+import team.unnamed.mocha.util.ExprBytesUtils;
 
 import java.util.Objects;
 
@@ -41,6 +43,10 @@ import java.util.Objects;
 public final class IdentifierExpression implements Expression {
 
     private final String name;
+
+    public IdentifierExpression(ByteBuf buf) {
+        this(ExprBytesUtils.readString(buf));
+    }
 
     public IdentifierExpression(final @NotNull String name) {
         Objects.requireNonNull(name, "name");
@@ -61,6 +67,11 @@ public final class IdentifierExpression implements Expression {
     @Override
     public <R> R visit(final @NotNull ExpressionVisitor<R> visitor) {
         return visitor.visitIdentifier(this);
+    }
+
+    @Override
+    public void write(ByteBuf buf) {
+        ExprBytesUtils.writeString(buf, name());
     }
 
     @Override

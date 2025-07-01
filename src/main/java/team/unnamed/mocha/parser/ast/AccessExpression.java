@@ -23,7 +23,9 @@
  */
 package team.unnamed.mocha.parser.ast;
 
+import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.NotNull;
+import team.unnamed.mocha.util.ExprBytesUtils;
 
 import static java.util.Objects.requireNonNull;
 
@@ -40,6 +42,13 @@ public final class AccessExpression implements Expression {
 
     private final String property;
     private Expression object;
+
+    public AccessExpression(ByteBuf buf) {
+        this(
+                ExprBytesUtils.readExpression(buf),
+                ExprBytesUtils.readString(buf)
+        );
+    }
 
     public AccessExpression(final @NotNull Expression object, final @NotNull String property) {
         this.object = requireNonNull(object, "object");
@@ -81,6 +90,12 @@ public final class AccessExpression implements Expression {
     @Override
     public <R> R visit(final @NotNull ExpressionVisitor<R> visitor) {
         return visitor.visitAccess(this);
+    }
+
+    @Override
+    public void write(ByteBuf buf) {
+        ExprBytesUtils.writeExpression(object(), buf);
+        ExprBytesUtils.writeString(buf, property());
     }
 
     @Override

@@ -23,7 +23,9 @@
  */
 package team.unnamed.mocha.parser.ast;
 
+import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.NotNull;
+import team.unnamed.mocha.util.ExprBytesUtils;
 
 import java.util.Objects;
 
@@ -39,6 +41,10 @@ import java.util.Objects;
 public final class StatementExpression implements Expression {
 
     private final Op op;
+
+    public StatementExpression(ByteBuf buf) {
+        this(ExprBytesUtils.getEnum(Op.values(), buf));
+    }
 
     public StatementExpression(final @NotNull Op op) {
         this.op = Objects.requireNonNull(op, "op");
@@ -57,6 +63,11 @@ public final class StatementExpression implements Expression {
     @Override
     public <R> R visit(final @NotNull ExpressionVisitor<R> visitor) {
         return visitor.visitStatement(this);
+    }
+
+    @Override
+    public void write(ByteBuf buf) {
+        buf.writeByte(op.ordinal());
     }
 
     @Override

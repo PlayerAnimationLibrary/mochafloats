@@ -23,7 +23,9 @@
  */
 package team.unnamed.mocha.parser.ast;
 
+import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.NotNull;
+import team.unnamed.mocha.util.ExprBytesUtils;
 
 import java.util.Objects;
 
@@ -38,6 +40,10 @@ import java.util.Objects;
 public final class StringExpression implements Expression {
 
     private final String value;
+
+    public StringExpression(ByteBuf buf) {
+        this(ExprBytesUtils.readString(buf));
+    }
 
     public StringExpression(final @NotNull String value) {
         this.value = Objects.requireNonNull(value, "value");
@@ -56,6 +62,11 @@ public final class StringExpression implements Expression {
     @Override
     public <R> R visit(final @NotNull ExpressionVisitor<R> visitor) {
         return visitor.visitString(this);
+    }
+
+    @Override
+    public void write(ByteBuf buf) {
+        ExprBytesUtils.writeString(buf, value());
     }
 
     @Override
