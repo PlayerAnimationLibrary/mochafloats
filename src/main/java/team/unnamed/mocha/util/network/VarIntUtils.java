@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package team.unnamed.mocha.util;
+package team.unnamed.mocha.util.network;
 
 import io.netty.buffer.ByteBuf;
 

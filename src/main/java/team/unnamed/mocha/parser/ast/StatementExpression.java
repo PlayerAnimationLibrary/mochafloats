@@ -25,7 +25,7 @@ package team.unnamed.mocha.parser.ast;
 
 import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.NotNull;
-import team.unnamed.mocha.util.ExprBytesUtils;
+import team.unnamed.mocha.util.network.ProtocolUtils;
 
 import java.util.Objects;
 
@@ -43,7 +43,7 @@ public final class StatementExpression implements Expression {
     private final Op op;
 
     public StatementExpression(ByteBuf buf) {
-        this(ExprBytesUtils.getEnum(Op.values(), buf));
+        this(ProtocolUtils.getEnum(Op.values(), buf));
     }
 
     public StatementExpression(final @NotNull Op op) {

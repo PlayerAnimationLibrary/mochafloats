@@ -48,7 +48,7 @@ public final class CallExpression implements Expression {
     public CallExpression(ByteBuf buf) {
         this(
                 ExprBytesUtils.readExpression(buf),
-                ExprBytesUtils.readList(buf, ExprBytesUtils::readExpression)
+                ExprBytesUtils.readExpressions(buf)
         );
     }
 
@@ -93,7 +93,7 @@ public final class CallExpression implements Expression {
     @Override
     public void write(ByteBuf buf) {
         ExprBytesUtils.writeExpression(function(), buf);
-        ExprBytesUtils.writeList(buf, arguments(), ExprBytesUtils::writeExpression);
+        ExprBytesUtils.writeExpressions(arguments(), buf);
     }
 
     @Override

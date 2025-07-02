@@ -72,9 +72,9 @@ public final class MochaAssertions {
 
         { // Network testing
             ByteBuf buf = Unpooled.buffer();
-            ExprBytesUtils.writeList(buf, expressions, ExprBytesUtils::writeExpression);
+            ExprBytesUtils.writeExpressions(expressions, buf);
 
-            List<Expression> readed = ExprBytesUtils.readList(buf, ExprBytesUtils::readExpression);
+            List<Expression> readed = ExprBytesUtils.readExpressions(buf);
             buf.release();
 
             assertEquals(readed, expressions);

@@ -26,6 +26,7 @@ package team.unnamed.mocha.parser.ast;
 import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.NotNull;
 import team.unnamed.mocha.util.ExprBytesUtils;
+import team.unnamed.mocha.util.network.ProtocolUtils;
 
 import static java.util.Objects.requireNonNull;
 
@@ -46,7 +47,7 @@ public final class AccessExpression implements Expression {
     public AccessExpression(ByteBuf buf) {
         this(
                 ExprBytesUtils.readExpression(buf),
-                ExprBytesUtils.readString(buf)
+                ProtocolUtils.readString(buf)
         );
     }
 
@@ -95,7 +96,7 @@ public final class AccessExpression implements Expression {
     @Override
     public void write(ByteBuf buf) {
         ExprBytesUtils.writeExpression(object(), buf);
-        ExprBytesUtils.writeString(buf, property());
+        ProtocolUtils.writeString(buf, property());
     }
 
     @Override

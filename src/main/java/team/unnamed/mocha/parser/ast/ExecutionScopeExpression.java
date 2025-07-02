@@ -46,7 +46,7 @@ public final class ExecutionScopeExpression implements Expression {
     private final List<Expression> expressions;
 
     public ExecutionScopeExpression(ByteBuf buf) {
-        this(ExprBytesUtils.readList(buf, ExprBytesUtils::readExpression));
+        this(ExprBytesUtils.readExpressions(buf));
     }
 
     public ExecutionScopeExpression(final @NotNull List<Expression> expressions) {
@@ -68,7 +68,7 @@ public final class ExecutionScopeExpression implements Expression {
 
     @Override
     public void write(ByteBuf buf) {
-        ExprBytesUtils.writeList(buf, expressions(), ExprBytesUtils::writeExpression);
+        ExprBytesUtils.writeExpressions(expressions(), buf);
     }
 
     @Override

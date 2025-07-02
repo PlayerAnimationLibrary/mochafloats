@@ -27,6 +27,7 @@ import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import team.unnamed.mocha.util.ExprBytesUtils;
+import team.unnamed.mocha.util.network.ProtocolUtils;
 
 import static java.util.Objects.requireNonNull;
 
@@ -46,7 +47,7 @@ public final class BinaryExpression implements Expression {
 
     public BinaryExpression(ByteBuf buf) {
         this(
-                ExprBytesUtils.getEnum(Op.values(), buf),
+                ProtocolUtils.getEnum(Op.values(), buf),
                 ExprBytesUtils.readExpression(buf),
                 ExprBytesUtils.readExpression(buf)
         );

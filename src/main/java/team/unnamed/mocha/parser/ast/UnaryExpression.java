@@ -26,6 +26,7 @@ package team.unnamed.mocha.parser.ast;
 import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.NotNull;
 import team.unnamed.mocha.util.ExprBytesUtils;
+import team.unnamed.mocha.util.network.ProtocolUtils;
 
 import static java.util.Objects.requireNonNull;
 
@@ -46,7 +47,7 @@ public final class UnaryExpression implements Expression {
 
     public UnaryExpression(ByteBuf buf) {
         this(
-                ExprBytesUtils.getEnum(Op.values(), buf),
+                ProtocolUtils.getEnum(Op.values(), buf),
                 ExprBytesUtils.readExpression(buf)
         );
     }

@@ -24,16 +24,13 @@
 package team.unnamed.mocha.util;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
 import org.jetbrains.annotations.NotNull;
 import team.unnamed.mocha.parser.ast.*;
+import team.unnamed.mocha.util.network.ProtocolUtils;
 
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 public class ExprBytesUtils {
@@ -68,41 +65,11 @@ public class ExprBytesUtils {
         return BYTE_TO_EXPR.get(buf.readByte()).apply(buf);
     }
 
-    public static <T> List<T> readList(ByteBuf buf, Function<ByteBuf, T> reader) {
-        int count = VarIntUtils.readVarInt(buf);
-        List<T> list = new ArrayList<>(count);
-        for (int i = 0; i < count; i++) {
-            list.add(reader.apply(buf));
-        }
-        return list;
+    public static List<Expression> readExpressions(ByteBuf buf) {
+        return ProtocolUtils.readList(buf, ExprBytesUtils::readExpression);
     }
 
-    public static <T> void writeList(ByteBuf buf, List<T> list, BiConsumer<T, ByteBuf> writer) {
-        VarIntUtils.writeVarInt(buf, list.size());
-        for (T entry : list) {
-            writer.accept(entry, buf);
-        }
-    }
-
-    public static <T> T getEnum(T[] values, ByteBuf buf) {
-        int ordinal = buf.readByte();
-        if (ordinal < 0 || ordinal > values.length) {
-            return values[0]; // TODO
-        }
-        return values[ordinal];
-    }
-
-    public static String readString(ByteBuf buf) {
-        int length = VarIntUtils.readVarInt(buf);
-        if (length <= 0) return null;
-        String str = buf.toString(buf.readerIndex(), length, StandardCharsets.UTF_8);
-        buf.skipBytes(length);
-        return str;
-    }
-
-    public static void writeString(ByteBuf buf, String str) {
-        int size = ByteBufUtil.utf8Bytes(str);
-        VarIntUtils.writeVarInt(buf, size);
-        buf.writeCharSequence(str, StandardCharsets.UTF_8);
+    public static void writeExpressions(List<Expression> list, ByteBuf buf) {
+        ProtocolUtils.writeList(buf, list, ExprBytesUtils::writeExpression);
     }
 }

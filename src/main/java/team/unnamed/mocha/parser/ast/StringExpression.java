@@ -25,7 +25,7 @@ package team.unnamed.mocha.parser.ast;
 
 import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.NotNull;
-import team.unnamed.mocha.util.ExprBytesUtils;
+import team.unnamed.mocha.util.network.ProtocolUtils;
 
 import java.util.Objects;
 
@@ -42,7 +42,7 @@ public final class StringExpression implements Expression {
     private final String value;
 
     public StringExpression(ByteBuf buf) {
-        this(ExprBytesUtils.readString(buf));
+        this(ProtocolUtils.readString(buf));
     }
 
     public StringExpression(final @NotNull String value) {
@@ -66,7 +66,7 @@ public final class StringExpression implements Expression {
 
     @Override
     public void write(ByteBuf buf) {
-        ExprBytesUtils.writeString(buf, value());
+        ProtocolUtils.writeString(buf, value());
     }
 
     @Override
