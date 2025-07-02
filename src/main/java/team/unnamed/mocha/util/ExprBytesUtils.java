@@ -24,6 +24,7 @@
 package team.unnamed.mocha.util;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import org.jetbrains.annotations.NotNull;
 import team.unnamed.mocha.parser.ast.*;
 
@@ -68,7 +69,7 @@ public class ExprBytesUtils {
     }
 
     public static <T> List<T> readList(ByteBuf buf, Function<ByteBuf, T> reader) {
-        int count = buf.readInt();
+        int count = VarIntUtils.readVarInt(buf);
         List<T> list = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             list.add(reader.apply(buf));
@@ -77,7 +78,7 @@ public class ExprBytesUtils {
     }
 
     public static <T> void writeList(ByteBuf buf, List<T> list, BiConsumer<T, ByteBuf> writer) {
-        buf.writeInt(list.size());
+        VarIntUtils.writeVarInt(buf, list.size());
         for (T entry : list) {
             writer.accept(entry, buf);
         }
@@ -92,20 +93,16 @@ public class ExprBytesUtils {
     }
 
     public static String readString(ByteBuf buf) {
-        int len = buf.readInt();
-        if (len <= 0) return null;
-        byte[] b = new byte[len];
-        buf.readBytes(b); //that is safe to use.
-        return new String(b, StandardCharsets.UTF_8);
+        int length = VarIntUtils.readVarInt(buf);
+        if (length <= 0) return null;
+        String str = buf.toString(buf.readerIndex(), length, StandardCharsets.UTF_8);
+        buf.skipBytes(length);
+        return str;
     }
 
     public static void writeString(ByteBuf buf, String str) {
-        if (str == null || str.isBlank()) { // Minor optimization to avoid writing empty lines
-            buf.writeInt(0);
-            return;
-        }
-        byte[] b = str.getBytes(StandardCharsets.UTF_8);
-        buf.writeInt(b.length);
-        buf.writeBytes(b);
+        int size = ByteBufUtil.utf8Bytes(str);
+        VarIntUtils.writeVarInt(buf, size);
+        buf.writeCharSequence(str, StandardCharsets.UTF_8);
     }
 }
