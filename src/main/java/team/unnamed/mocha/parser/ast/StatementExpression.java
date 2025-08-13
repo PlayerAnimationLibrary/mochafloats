@@ -43,7 +43,7 @@ public final class StatementExpression implements Expression {
     private final Op op;
 
     public StatementExpression(ByteBuf buf) {
-        this(ProtocolUtils.getEnum(Op.values(), buf));
+        this(ProtocolUtils.readEnum(Op.class, buf));
     }
 
     public StatementExpression(final @NotNull Op op) {
@@ -67,7 +67,7 @@ public final class StatementExpression implements Expression {
 
     @Override
     public void write(ByteBuf buf) {
-        buf.writeByte(op.ordinal());
+        ProtocolUtils.writeEnum(op(), buf);
     }
 
     @Override

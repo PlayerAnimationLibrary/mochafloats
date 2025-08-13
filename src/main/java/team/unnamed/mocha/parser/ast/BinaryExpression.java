@@ -47,7 +47,7 @@ public final class BinaryExpression implements Expression {
 
     public BinaryExpression(ByteBuf buf) {
         this(
-                ProtocolUtils.getEnum(Op.values(), buf),
+                ProtocolUtils.readEnum(Op.class, buf),
                 ExprBytesUtils.readExpression(buf),
                 ExprBytesUtils.readExpression(buf)
         );
@@ -120,7 +120,7 @@ public final class BinaryExpression implements Expression {
 
     @Override
     public void write(ByteBuf buf) {
-        buf.writeByte(op().ordinal());
+        ProtocolUtils.writeEnum(op(), buf);
         ExprBytesUtils.writeExpression(left(), buf);
         ExprBytesUtils.writeExpression(right(), buf);
     }

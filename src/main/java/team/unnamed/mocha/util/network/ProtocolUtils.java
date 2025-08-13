@@ -49,12 +49,18 @@ public class ProtocolUtils {
         }
     }
 
-    public static <T> T getEnum(T[] values, ByteBuf buf) {
-        int ordinal = buf.readByte();
-        if (ordinal < 0 || ordinal > values.length) {
-            return values[0]; // TODO
+    public static void writeEnum(Enum<?> enumValue, ByteBuf buf) {
+        buf.writeByte(enumValue.ordinal());
+    }
+
+    public static <T> T readEnum(Class<T> enumClass, ByteBuf buf) {
+        int ordinal = buf.readUnsignedByte();
+
+        T[] constants = enumClass.getEnumConstants();
+        if (ordinal < 0 || ordinal >= constants.length) {
+            return constants[0]; // TODO
         }
-        return values[ordinal];
+        return constants[ordinal];
     }
 
     public static String readString(ByteBuf buf) {

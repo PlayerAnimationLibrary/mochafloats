@@ -47,7 +47,7 @@ public final class UnaryExpression implements Expression {
 
     public UnaryExpression(ByteBuf buf) {
         this(
-                ProtocolUtils.getEnum(Op.values(), buf),
+                ProtocolUtils.readEnum(Op.class, buf),
                 ExprBytesUtils.readExpression(buf)
         );
     }
@@ -94,7 +94,7 @@ public final class UnaryExpression implements Expression {
 
     @Override
     public void write(ByteBuf buf) {
-        buf.writeByte(this.op.ordinal());
+        ProtocolUtils.writeEnum(op(), buf);
         ExprBytesUtils.writeExpression(this.expression, buf);
     }
 
