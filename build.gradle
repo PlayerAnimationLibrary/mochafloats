@@ -1,7 +1,7 @@
 plugins {
     id "java-library"
     id "maven-publish"
-    id("org.cadixdev.licenser") version "0.6.1"
+    id("net.neoforged.licenser") version "0.7.5"
     id("me.champeau.jmh") version "0.7.2"
 }
 
@@ -25,10 +25,8 @@ dependencies {
     jmhImplementation("gg.moonflower:molang-compiler:3.1.1.19")
 }
 
-tasks.register("generateExpectations") {
-    exec {
-        commandLine 'node', 'scripts/generate_expectations.js'
-    }
+tasks.register('generateExpectations', Exec) {
+    commandLine 'node', 'scripts/generate_expectations.js'
 }
 
 tasks {
@@ -58,9 +56,6 @@ license {
 java {
     withJavadocJar()
     withSourcesJar()
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
-    }
 }
 
 publishing {
