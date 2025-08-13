@@ -28,14 +28,14 @@ import org.jetbrains.annotations.NotNull;
 import team.unnamed.mocha.parser.ast.*;
 import team.unnamed.mocha.util.network.ProtocolUtils;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 
 public class ExprBytesUtils {
-    private static final Map<Class<? extends Expression>, Byte> EXPR_TO_BYTE = new ConcurrentHashMap<>();
-    private static final Map<Byte, Function<ByteBuf, ? extends Expression>> BYTE_TO_EXPR = new ConcurrentHashMap<>();
+    private static final Map<Class<? extends Expression>, Byte> EXPR_TO_BYTE = new HashMap<>();
+    private static final Map<Byte, Function<ByteBuf, ? extends Expression>> BYTE_TO_EXPR = new HashMap<>();
 
     static {
         registerExpression((byte) 0, UnaryExpression.class, UnaryExpression::new);
@@ -57,12 +57,16 @@ public class ExprBytesUtils {
     }
 
     public static void writeExpression(Expression expression, ByteBuf buf) {
-        buf.writeByte(EXPR_TO_BYTE.get(expression.getClass()));
+        Byte id = EXPR_TO_BYTE.get(expression.getClass());
+        if (id == null) throw new IllegalArgumentException("Unknown expression class: " + expression.getClass());
+        buf.writeByte(id);
         expression.write(buf);
     }
 
     public static @NotNull Expression readExpression(ByteBuf buf) {
-        return BYTE_TO_EXPR.get(buf.readByte()).apply(buf);
+        Function<ByteBuf, ? extends Expression> reader = BYTE_TO_EXPR.get(buf.readByte());
+        if (reader == null) throw new IllegalArgumentException("Unknown expression id in buffer");
+        return reader.apply(buf);
     }
 
     public static List<Expression> readExpressions(ByteBuf buf) {
