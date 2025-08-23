@@ -29,6 +29,7 @@ import org.jetbrains.annotations.Nullable;
 import team.unnamed.mocha.parser.MolangParser;
 import team.unnamed.mocha.parser.ParseException;
 import team.unnamed.mocha.parser.ast.Expression;
+import team.unnamed.mocha.parser.ast.FloatExpression;
 import team.unnamed.mocha.runtime.ExpressionInterpreter;
 import team.unnamed.mocha.runtime.MochaFunction;
 import team.unnamed.mocha.runtime.MolangCompiler;
@@ -64,6 +65,10 @@ final class MochaEngineImpl<T> implements MochaEngine<T> {
 
     @Override
     public float eval(final @NotNull List<Expression> expressions) {
+        if (expressions.size() == 1 && expressions.getFirst() instanceof FloatExpression expression) {
+            return expression.value();
+        }
+
         // create bindings that just apply for this evaluation
         final Scope local = scope.copy();
         {

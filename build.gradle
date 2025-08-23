@@ -39,8 +39,8 @@ tasks {
         targetCompatibility = "17"
     }
     compileJava {
-        sourceCompatibility = "8"
-        targetCompatibility = "8"
+        sourceCompatibility = "16"
+        targetCompatibility = "16"
     }
     javadoc {
         failOnError = false
