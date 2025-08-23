@@ -65,7 +65,7 @@ final class MochaEngineImpl<T> implements MochaEngine<T> {
 
     @Override
     public float eval(final @NotNull List<Expression> expressions) {
-        if (expressions.size() == 1 && expressions.getFirst() instanceof FloatExpression expression) {
+        if (expressions.size() == 1 && expressions.get(0) instanceof FloatExpression expression) {
             return expression.value();
         }
 
