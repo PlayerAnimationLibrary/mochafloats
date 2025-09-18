@@ -61,6 +61,10 @@ java {
     withSourcesJar()
 }
 
+jar {
+    manifest.attributes("FMLModType": "GAMELIBRARY")
+}
+
 publishing {
     repositories {
         maven {
