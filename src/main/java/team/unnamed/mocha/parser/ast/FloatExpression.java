@@ -83,8 +83,8 @@ public final class FloatExpression implements Expression {
 
     @Override
     public String toString() {
-        if ((int)value == value) {
-            return String.valueOf((int)value);
+        if ((long) value == value) {
+            return String.valueOf((long) value);
         }
         return String.valueOf(value);
     }
