@@ -23,6 +23,7 @@
  */
 package team.unnamed.mocha.parser;
 
+import org.jetbrains.annotations.Nullable;
 import team.unnamed.mocha.lexer.Cursor;
 
 import java.io.IOException;
@@ -35,32 +36,34 @@ import java.io.IOException;
  */
 public class ParseException extends IOException {
 
+    @Nullable
     private final Cursor cursor;
 
-    public ParseException(Cursor cursor) {
+    public ParseException(@Nullable Cursor cursor) {
         this.cursor = cursor;
     }
 
-    public ParseException(String message, Cursor cursor) {
+    public ParseException(String message, @Nullable Cursor cursor) {
         super(appendCursor(message, cursor));
         this.cursor = cursor;
     }
 
-    public ParseException(Throwable cause, Cursor cursor) {
+    public ParseException(Throwable cause, @Nullable Cursor cursor) {
         super(cause);
         this.cursor = cursor;
     }
 
-    public ParseException(String message, Throwable cause, Cursor cursor) {
+    public ParseException(String message, Throwable cause, @Nullable Cursor cursor) {
         super(appendCursor(message, cursor), cause);
         this.cursor = cursor;
     }
 
+    @Nullable
     public Cursor cursor() {
         return cursor;
     }
 
-    private static String appendCursor(String message, Cursor cursor) {
+    private static String appendCursor(String message, @Nullable Cursor cursor) {
         if (cursor == null) return message; // todo
         // default format for exception messages, i.e.
         // "unexpected token: '%'"
