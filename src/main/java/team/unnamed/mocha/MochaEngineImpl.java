@@ -192,6 +192,7 @@ final class MochaEngineImpl<T> implements MochaEngine<T> {
     }
 
     @Override
+    @Deprecated(forRemoval = true)
     public @NotNull ClassPool classPool() {
         return compiler.classPool();
     }

@@ -288,8 +288,9 @@ public interface MochaEngine<T> {
      *
      * @return The compiler class pool
      * @since 3.0.0
-     * @apiNote This method might be removed in a future minor version.
+     * @deprecated This method might be removed in a future minor version.
      */
+    @Deprecated(forRemoval = true)
     @ApiStatus.Internal
     @NotNull ClassPool classPool();
     //#endregion END COMPILING API
