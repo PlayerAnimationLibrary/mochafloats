@@ -46,7 +46,9 @@ import java.util.Random;
 @BindExternalFunction(at = Math.class, name = "round", args = {float.class}, pure = true)
 public final class MochaMath implements ObjectValue {
     @Binding("pi")
-    public static final double PI = Math.PI;
+    public static final float PI = (float) Math.PI;
+    @Binding("e")
+    public static final float E = (float) Math.E;
 
     private static final double RADIAN = Math.toRadians(1);
 
@@ -63,12 +65,14 @@ public final class MochaMath implements ObjectValue {
         setFunction("atan2", MochaMath::atan2);
         setFunction("ceil", MochaMath::ceil);
         setFunction("clamp", MochaMath::clamp);
+        setFunction("copy_sign", MochaMath::copySign);
         setFunction("cos", MochaMath::cos);
         setFunction("die_roll", MochaMath::dieRoll);
         setFunction("die_roll_integer", MochaMath::dieRollInteger);
         setFunction("exp", MochaMath::exp);
         setFunction("floor", MochaMath::floor);
         setFunction("hermite_blend", MochaMath::hermiteBlend);
+        setFunction("inverse_lerp", MochaMath::inverseLerp);
         setFunction("lerp", MochaMath::lerp);
         setFunction("lerprotate", MochaMath::lerpRotate);
         setFunction("ln",  MochaMath::log);
@@ -77,13 +81,17 @@ public final class MochaMath implements ObjectValue {
         setFunction("min_angle", MochaMath::minAngle);
         setFunction("mod", MochaMath::mod);
         entries.put("pi", ObjectProperty.property(NumberValue.of(Math.PI), true));
+        entries.put("e", ObjectProperty.property(NumberValue.of(Math.E), true));
         setFunction("pow", MochaMath::pow);
         setFunction("random", MochaMath::random);
         setFunction("random_integer", MochaMath::randomInteger);
         setFunction("round", Math::round);
+        setFunction("sign", MochaMath::sign);
         setFunction("sin", MochaMath::sin);
         setFunction("sqrt", MochaMath::sqrt);
         setFunction("trunc", MochaMath::trunc);
+        setFunction("d2r", MochaMath::d2r);
+        setFunction("r2d", MochaMath::r2d);
 
         // all of our properties are constant
         entries.replaceAll((key, property) -> ObjectProperty.property(property.value(), true));
@@ -148,6 +156,12 @@ public final class MochaMath implements ObjectValue {
         return Math.max(Math.min(value, max), min);
     }
 
+    @Binding(value = "copy_sign", pure = true)
+    public static float copySign(float magnitude, final float sign) {
+        magnitude = Math.abs(magnitude);
+        return sign < 0 ? -magnitude : magnitude;
+    }
+
     @Binding(value = "cos", pure = true)
     public static float cos(final float value) {
         return (float) Math.cos(value * RADIAN);
@@ -176,6 +190,12 @@ public final class MochaMath implements ObjectValue {
         final float t2 = t * t;
         final float t3 = t2 * t;
         return 3 * t2 - 2 * t3;
+    }
+
+    @Binding(value = "inverse_lerp", pure = true)
+    public static float inverseLerp(final float start, final float end, final float lerp) {
+        if (start == end) return 0;
+        return (lerp - start) / (end - start);
     }
 
     @Binding(value = "lerp", pure = true)
@@ -227,6 +247,13 @@ public final class MochaMath implements ObjectValue {
         return RANDOM.nextInt((int) min, (int) max);
     }
 
+    @Binding(value = "sign", pure = true)
+    public static float sign(final float value) {
+        if (value < 0) return -1;
+        if (value > 0) return 1;
+        return 0;
+    }
+
     @Binding(value = "sin", pure = true)
     public static float sin(final float value) {
         return (float) Math.sin(value * RADIAN);
@@ -235,6 +262,16 @@ public final class MochaMath implements ObjectValue {
     @Binding(value = "trunc", pure = true)
     public static float trunc(final float value) {
         return value - value % 1;
+    }
+
+    @Binding(value = "d2r", pure = true)
+    public static float d2r(final float value) {
+        return (float) Math.toRadians(value);
+    }
+
+    @Binding(value = "r2d", pure = true)
+    public static float r2d(final float value) {
+        return (float) Math.toDegrees(value);
     }
 
     @Override
