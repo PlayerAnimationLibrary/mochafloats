@@ -41,7 +41,7 @@ import team.unnamed.mocha.runtime.ExpressionInterpreter;
  * @since 3.0.0
  */
 @FunctionalInterface
-public interface Function<T> extends Value {
+public non-sealed interface Function<T> extends Value {
     /**
      * Executes this function with the given arguments.
      *

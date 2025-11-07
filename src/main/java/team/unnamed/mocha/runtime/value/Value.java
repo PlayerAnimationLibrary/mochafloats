@@ -32,7 +32,7 @@ import java.util.Map;
 import java.util.StringJoiner;
 
 @ApiStatus.NonExtendable
-public /* sealed */ interface Value /* permits Function, ObjectValue, ArrayValue, NumberValue, StringValue */ {
+public sealed interface Value permits JavaValue, Function, ObjectValue, ArrayValue, NumberValue, StringValue {
     static @NotNull Value of(final @Nullable Object any) {
         if (any instanceof Value) {
             return (Value) any;

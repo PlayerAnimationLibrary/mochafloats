@@ -40,7 +40,18 @@ import org.jetbrains.annotations.NotNull;
  * @since 3.0.0
  */
 @ApiStatus.NonExtendable
-public interface Expression {
+public sealed interface Expression permits
+        AccessExpression,
+        ArrayAccessExpression,
+        BinaryExpression,
+        CallExpression,
+        ExecutionScopeExpression,
+        FloatExpression,
+        IdentifierExpression,
+        StatementExpression,
+        StringExpression,
+        TernaryConditionalExpression,
+        UnaryExpression {
 
     /**
      * Visits this expression with the given visitor.

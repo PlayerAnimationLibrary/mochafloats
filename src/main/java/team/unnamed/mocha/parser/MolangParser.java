@@ -48,7 +48,7 @@ import java.util.List;
  *
  * @since 3.0.0
  */
-public /* sealed */ interface MolangParser /* permits MolangParserImpl */ extends Closeable {
+public sealed interface MolangParser extends Closeable permits MolangParserImpl {
 
     /**
      * Returns the internal lexer being used.

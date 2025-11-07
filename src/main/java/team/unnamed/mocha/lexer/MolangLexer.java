@@ -63,7 +63,7 @@ import java.util.List;
  * @since 3.0.0
  */
 @ApiStatus.NonExtendable
-public /* sealed */ interface MolangLexer /* permits MolangLexerImpl */ extends Closeable {
+public sealed interface MolangLexer extends Closeable permits MolangLexerImpl {
     /**
      * Creates a new lexer that will read the characters from the
      * given reader.

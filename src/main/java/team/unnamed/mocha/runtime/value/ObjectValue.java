@@ -29,7 +29,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Collections;
 import java.util.Map;
 
-public interface ObjectValue extends Value {
+public non-sealed interface ObjectValue extends Value {
     /**
      * Returns the property for the given name ignoring
      * its case. This method is CASE-INSENSITIVE.
