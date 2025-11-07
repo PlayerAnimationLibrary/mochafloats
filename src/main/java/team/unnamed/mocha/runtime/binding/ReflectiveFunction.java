@@ -34,6 +34,8 @@ import team.unnamed.mocha.runtime.value.NumberValue;
 import team.unnamed.mocha.runtime.value.StringValue;
 import team.unnamed.mocha.runtime.value.Value;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -45,12 +47,18 @@ import java.util.List;
 import static java.util.Objects.requireNonNull;
 
 final class ReflectiveFunction<T> implements Function<T> {
-    private final Object object;
     private final Method method;
+    private final MethodHandle mh;
 
     ReflectiveFunction(final @Nullable Object object, final @NotNull Method method) {
-        this.object = object;
         this.method = requireNonNull(method, "method");
+        try {
+            MethodHandle handle = MethodHandles.lookup().unreflect(method);
+            if (object != null) handle = handle.bindTo(object);
+            this.mh = handle;
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     static @NotNull Value of(final @Nullable Object any) {
@@ -151,9 +159,9 @@ final class ReflectiveFunction<T> implements Function<T> {
         }
 
         try {
-            return of(method.invoke(object, values));
-        } catch (final Exception exception) {
-            throw new RuntimeException(exception);
+            return of(mh.invokeWithArguments(values));
+        } catch (final Throwable throwable) {
+            throw new RuntimeException(throwable);
         }
     }
 }

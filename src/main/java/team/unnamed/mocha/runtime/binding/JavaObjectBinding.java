@@ -100,7 +100,7 @@ public final class JavaObjectBinding implements ObjectValue {
                         }
                     }
 
-                    final Function backing = getBacking(backingProperties, functionName, Function.class);
+                    final Function<?> backing = getBacking(backingProperties, functionName, Function.class);
                     final boolean pure = externalFunctionBinding.pure();
 
                     if (backing != null && backing.pure() != pure) {
@@ -167,14 +167,14 @@ public final class JavaObjectBinding implements ObjectValue {
             if (functionNames.length < 1) {
                 throw new IllegalArgumentException("No function names declared for method " + method);
             }
-            final Function backing = getBacking(backingProperties, functionNames[0], Function.class);
+            final Function<?> backing = getBacking(backingProperties, functionNames[0], Function.class);
             final boolean pure = annotation.pure();
 
             if (backing != null && backing.pure() != pure) {
                 throw new IllegalStateException("Different 'pure' values for interface and Java functions for function " + functionNames[0]);
             }
 
-            final Function javaFunction = new JavaFunction(instance, method, backing, pure);
+            final Function<?> javaFunction = new JavaFunction<>(instance, method, backing, pure);
             for (final String functionName : functionNames) {
                 object.entries.put(functionName, javaFunction);
             }
