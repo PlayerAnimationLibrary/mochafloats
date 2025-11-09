@@ -67,6 +67,10 @@ public non-sealed interface ObjectValue extends Value {
     }
 
     // :) overloads
+    default void setFunction(final @NotNull String name, final @NotNull ObjectValue.FloatFunction function) {
+        set(name, (Function<?>) (ctx, args) -> NumberValue.of(function.apply()));
+    }
+
     default void setFunction(final @NotNull String name, final @NotNull ObjectValue.FloatFunction1 function) {
         set(name, (Function<?>) (ctx, args) -> NumberValue.of(function.apply(args.next().eval().getAsNumber())));
     }
@@ -77,6 +81,10 @@ public non-sealed interface ObjectValue extends Value {
 
     default void setFunction(final @NotNull String name, final @NotNull ObjectValue.FloatFunction3 function) {
         set(name, (Function<?>) (ctx, args) -> NumberValue.of(function.apply(args.next().eval().getAsNumber(), args.next().eval().getAsNumber(), args.next().eval().getAsNumber())));
+    }
+
+    interface FloatFunction {
+        float apply();
     }
 
     interface FloatFunction1 {
