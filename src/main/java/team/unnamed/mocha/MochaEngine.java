@@ -242,6 +242,18 @@ public interface MochaEngine<T> {
      * Compiles the given code into a Molang function
      * that can take arguments.
      *
+     * @param expressions   The code to compile.
+     * @param interfaceType The interface to implement, must
+     *                      have a single method.
+     * @return The compiled function.
+     * @since 4.0.4
+     */
+    <F extends MochaCompiledFunction> @NotNull F compile(final @NotNull List<Expression> expressions, final @NotNull Class<F> interfaceType);
+
+    /**
+     * Compiles the given code into a Molang function
+     * that can take arguments.
+     *
      * @param code          The code to compile.
      * @param interfaceType The interface to implement, must
      *                      have a single method.
@@ -265,6 +277,18 @@ public interface MochaEngine<T> {
      */
     default @NotNull MochaFunction compile(final @NotNull Reader reader) {
         return compile(reader, MochaFunction.class);
+    }
+
+    /**
+     * Compiles the given code into a Molang function
+     * that takes no arguments.
+     *
+     * @param expressions The code to compile.
+     * @return The compiled function.
+     * @since 4.0.4
+     */
+    default @NotNull MochaFunction compile(final @NotNull List<Expression> expressions) {
+        return compile(expressions, MochaFunction.class);
     }
 
     /**

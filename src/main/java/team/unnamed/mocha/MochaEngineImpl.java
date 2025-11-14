@@ -188,6 +188,11 @@ final class MochaEngineImpl<T> implements MochaEngine<T> {
         } catch (final IOException e) {
             throw new RuntimeException("Failed to read from given reader", e);
         }
+        return compile(parsed, interfaceType);
+    }
+
+    @Override
+    public <F extends MochaCompiledFunction> @NotNull F compile(final @NotNull List<Expression> parsed, final @NotNull Class<F> interfaceType) {
         return compiler.compile(parsed, interfaceType);
     }
 
