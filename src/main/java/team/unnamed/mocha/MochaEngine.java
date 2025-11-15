@@ -143,9 +143,17 @@ public interface MochaEngine<T> {
      *
      * @param expressions The expressions to evaluate.
      * @return The result of the evaluation.
+     * @since 4.1.0
+     */
+    float eval(final @NotNull List<Expression> expressions, final @Nullable Consumer<Scope> scopeConsumer);
+
+    /**
+     * See {@link #eval(List, Consumer)}
      * @since 3.0.0
      */
-    float eval(final @NotNull List<Expression> expressions);
+    default float eval(final @NotNull List<Expression> expressions) {
+        return eval(expressions, null);
+    }
 
     /**
      * Parses and evaluates the given Molang source.
@@ -153,16 +161,24 @@ public interface MochaEngine<T> {
      * <p>Note that the engine instance is not responsible
      * for caching parsed expressions, so if you want to
      * re-use parsed expressions, you should use the
-     * {@link #parse(Reader)} and {@link #eval(List)}
+     * {@link #parse(Reader)} and {@link #eval(List, Consumer)}
      * methods.</p>
      *
      * @param source The source to evaluate.
      * @return The result of the evaluation.
      * @see #parse(Reader)
-     * @see #eval(List)
+     * @see #eval(List, Consumer)
+     * @since 4.1.0
+     */
+    float eval(final @NotNull Reader source, final @Nullable Consumer<Scope> scopeConsumer);
+
+    /**
+     * See {@link #eval(Reader, Consumer)}
      * @since 3.0.0
      */
-    float eval(final @NotNull Reader source);
+    default float eval(final @NotNull Reader source) {
+        return eval(source, null);
+    }
 
     /**
      * Parses and evaluates the given Molang source.
@@ -170,20 +186,28 @@ public interface MochaEngine<T> {
      * <p>Note that the engine instance is not responsible
      * for caching parsed expressions, so if you want to
      * re-use parsed expressions, you should use the
-     * {@link #parse(String)} and {@link #eval(List)}
+     * {@link #parse(String)} and {@link #eval(List, Consumer)}
      * methods.</p>
      *
      * @param source The source to evaluate.
      * @return The result of the evaluation.
      * @see #parse(String)
-     * @see #eval(List)
+     * @see #eval(List, Consumer)
+     * @since 4.1.0
+     */
+    default float eval(final @NotNull String source, final @Nullable Consumer<Scope> scopeConsumer) {
+        requireNonNull(source, "script");
+        try (final StringReader reader = new StringReader(source)) {
+            return eval(reader, scopeConsumer);
+        }
+    }
+
+    /**
+     * See {@link #eval(String, Consumer)}
      * @since 3.0.0
      */
     default float eval(final @NotNull String source) {
-        requireNonNull(source, "script");
-        try (final StringReader reader = new StringReader(source)) {
-            return eval(reader);
-        }
+        return eval(source, null);
     }
 
     /**
@@ -195,14 +219,22 @@ public interface MochaEngine<T> {
      *
      * <p>This approach is the same as parsing to a List of
      * expressions, caching them and then evaluating using
-     * {@link #eval(List)}, but easier, since it already keeps
+     * {@link #eval(List, Consumer)}, but easier, since it already keeps
      * this {@link MochaEngine} instance.</p>
      *
      * @param reader The reader to read the data from
      * @return The cached, interpretable function
+     * @since 4.1.0
+     */
+    @NotNull MochaFunction prepareEval(final @NotNull Reader reader, final @Nullable Consumer<Scope> scopeConsumer);
+
+    /**
+     * See {@link #prepareEval(Reader, Consumer)}
      * @since 3.0.0
      */
-    @NotNull MochaFunction prepareEval(final @NotNull Reader reader);
+    default @NotNull MochaFunction prepareEval(final @NotNull Reader reader) {
+        return prepareEval(reader, null);
+    }
 
     /**
      * Parses the given {@code string} and returns a cached,
@@ -210,17 +242,25 @@ public interface MochaEngine<T> {
      *
      * <p>This approach is the same as parsing to a List of
      * expressions, caching them and then evaluating using
-     * {@link #eval(List)}, but easier, since it already keeps
+     * {@link #eval(List, Consumer)}, but easier, since it already keeps
      * this {@link MochaEngine} instance.</p>
      *
      * @param string The MoLang string
      * @return The cached, interpretable function
+     * @since 4.1.0
+     */
+    default @NotNull MochaFunction prepareEval(final @NotNull String string, final @Nullable Consumer<Scope> scopeConsumer) {
+        try (final StringReader reader = new StringReader(string)) {
+            return prepareEval(reader, scopeConsumer);
+        }
+    }
+
+    /**
+     * See {@link #prepareEval(String, Consumer)}
      * @since 3.0.0
      */
     default @NotNull MochaFunction prepareEval(final @NotNull String string) {
-        try (final StringReader reader = new StringReader(string)) {
-            return prepareEval(reader);
-        }
+        return prepareEval(string, null);
     }
     //#endregion END INTERPRETER API
 

@@ -64,7 +64,7 @@ final class MochaEngineImpl<T> implements MochaEngine<T> {
     }
 
     @Override
-    public float eval(final @NotNull List<Expression> expressions) {
+    public float eval(final @NotNull List<Expression> expressions, final @Nullable Consumer<Scope> scopeConsumer) {
         if (expressions.size() == 1 && expressions.get(0) instanceof FloatExpression expression) {
             return expression.value();
         }
@@ -77,6 +77,7 @@ final class MochaEngineImpl<T> implements MochaEngine<T> {
             local.set("temp", temp);
             local.set("t", temp);
         }
+        if (scopeConsumer != null && !local.readOnly()) scopeConsumer.accept(local);
         local.readOnly(true);
         ExpressionInterpreter<T> evaluator = new ExpressionInterpreter<>(entity, local);
         evaluator.warnOnReflectiveFunctionUsage(warnOnReflectiveFunctionUsage);
@@ -96,7 +97,7 @@ final class MochaEngineImpl<T> implements MochaEngine<T> {
     }
 
     @Override
-    public float eval(final @NotNull Reader source) {
+    public float eval(final @NotNull Reader source, final @Nullable Consumer<Scope> scopeConsumer) {
         final List<Expression> parsed;
         try {
             parsed = parse(source);
@@ -109,11 +110,11 @@ final class MochaEngineImpl<T> implements MochaEngine<T> {
         } catch (final IOException e) {
             throw new UncheckedIOException("Failed to read from given reader", e);
         }
-        return eval(parsed);
+        return eval(parsed, scopeConsumer);
     }
 
     @Override
-    public @NotNull MochaFunction prepareEval(final @NotNull Reader reader) {
+    public @NotNull MochaFunction prepareEval(final @NotNull Reader reader, final @Nullable Consumer<Scope> scopeConsumer) {
         final List<Expression> parsed;
         try {
             parsed = parse(reader);
@@ -129,7 +130,7 @@ final class MochaEngineImpl<T> implements MochaEngine<T> {
         return new MochaFunction() {
             @Override
             public float evaluate() {
-                return eval(parsed);
+                return eval(parsed, scopeConsumer);
             }
 
             @Override
@@ -140,7 +141,7 @@ final class MochaEngineImpl<T> implements MochaEngine<T> {
     }
 
     @Override
-    public @NotNull MochaFunction prepareEval(final @NotNull String code) {
+    public @NotNull MochaFunction prepareEval(final @NotNull String code, final @Nullable Consumer<Scope> scopeConsumer) {
         final List<Expression> parsed;
         try {
             parsed = parse(code);
@@ -165,7 +166,7 @@ final class MochaEngineImpl<T> implements MochaEngine<T> {
         return new MochaFunction() {
             @Override
             public float evaluate() {
-                return eval(parsed);
+                return eval(parsed, scopeConsumer);
             }
 
             @Override
