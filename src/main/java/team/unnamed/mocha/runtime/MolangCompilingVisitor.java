@@ -301,6 +301,10 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
             // expects a long, push long
             bytecode.addLdc2w((long) value);
             return new CompileVisitResult(CtClass.longType);
+        } else if (expectedType == CtClass.doubleType) {
+            // expects a double, push double
+            bytecode.addLdc2w((double) value);
+            return new CompileVisitResult(CtClass.doubleType);
         } else {
             System.err.println("[warning] expected type " + expectedType + " has no possible cast from float (" + expression + ")");
             // evaluate to zero
@@ -574,6 +578,7 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
 
     @Override
     public CompileVisitResult visitCall(final @NotNull CallExpression expression) {
+        final CtClass targetType = this.expectedType;
         final Scope scope = functionCompileState.scope();
         final Expression functionExpr = expression.function();
 
@@ -625,57 +630,11 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
                 }
             }
 
-            final Object object = javaFunction.object();
+            final boolean isStatic = Modifier.isStatic(nativeMethod.getModifiers());
 
-            // load arguments
-            final Iterator<Expression> it = arguments.iterator();
-            for (int i = 0; i < parameters.length; i++) {
-                final Parameter parameter = parameters[i];
-
-                if (parameter.isAnnotationPresent(Entity.class)) {
-                    Object entity = functionCompileState.compiler().entity();
-                    if (entity == null || !parameter.getType().isInstance(entity)) {
-                        // load null
-                        bytecode.addConstZero(ctParameters[i]);
-                    } else {
-                        // add entity requirement
-                        requirements.put("__entity__", entity);
-
-                        // load entity requirement (field)
-                        bytecode.addAload(0); // load this
-                        bytecode.addGetfield(
-                                functionCompileState.type(),
-                                "__entity__",
-                                Descriptor.of(ctParameters[i])
-                        );
-                    }
-                    continue;
-                }
-
-                if (!it.hasNext()) {
-                    bytecode.addConstZero(ctParameters[i]);
-                    continue;
-                }
-
-                // Set the expected type, then load
-                expectedType = ctParameters[i];
-                it.next().visit(this);
-            }
-
-            final CtClass nativeMethodDeclaringCtClass;
-            final CtClass ctReturnType;
-
-            try {
-                nativeMethodDeclaringCtClass = classPool.get(nativeMethod.getDeclaringClass().getName());
-                ctReturnType = classPool.get(nativeMethod.getReturnType().getName());
-            } catch (final NotFoundException e) {
-                throw new IllegalStateException("Return type not found", e);
-            }
-
-            if (Modifier.isStatic(nativeMethod.getModifiers())) {
-                // invoke static
-                bytecode.addInvokestatic(nativeMethodDeclaringCtClass, nativeMethod.getName(), ctReturnType, ctParameters);
-            } else {
+            // load instance
+            if (!isStatic) {
+                final Object object = javaFunction.object();
                 final String fieldName = object.getClass().getSimpleName().toLowerCase() + Integer.toHexString(object.hashCode());
                 requirements.put(fieldName, object);
 
@@ -690,20 +649,77 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
                 // we must load object
                 bytecode.addAload(0);
                 bytecode.addGetfield(functionCompileState.type(), fieldName, Descriptor.of(requirementType));
+            }
+
+            // load arguments
+            final Iterator<Expression> it = arguments.iterator();
+            for (int i = 0; i < parameters.length; i++) {
+                final Parameter parameter = parameters[i];
+                final CtClass paramType = ctParameters[i];
+
+                if (parameter.isAnnotationPresent(Entity.class)) {
+                    Object entity = functionCompileState.compiler().entity();
+                    if (entity == null || !parameter.getType().isInstance(entity)) {
+                        // load null
+                        bytecode.addConstZero(paramType);
+                    } else {
+                        // add entity requirement
+                        requirements.put("__entity__", entity);
+
+                        // load entity requirement (field)
+                        bytecode.addAload(0); // load this
+                        bytecode.addGetfield(
+                                functionCompileState.type(),
+                                "__entity__",
+                                Descriptor.of(paramType)
+                        );
+                    }
+                    continue;
+                }
+
+                if (!it.hasNext()) {
+                    bytecode.addConstZero(paramType);
+                    continue;
+                }
+
+                // Set the expected type, then load
+                this.expectedType = paramType;
+                it.next().visit(this);
+            }
+
+            final CtClass nativeMethodDeclaringCtClass;
+            final CtClass ctReturnType;
+
+            try {
+                nativeMethodDeclaringCtClass = classPool.get(nativeMethod.getDeclaringClass().getName());
+                ctReturnType = classPool.get(nativeMethod.getReturnType().getName());
+            } catch (final NotFoundException e) {
+                throw new IllegalStateException("Return type not found", e);
+            }
+
+            if (isStatic) {
+                // invoke static
+                bytecode.addInvokestatic(nativeMethodDeclaringCtClass, nativeMethod.getName(), ctReturnType, ctParameters);
+            } else {
                 bytecode.addInvokevirtual(nativeMethodDeclaringCtClass, nativeMethod.getName(), ctReturnType, ctParameters);
             }
 
             if (nativeMethod.getReturnType() == void.class) {
-                if (expectedType != CtClass.voidType) {
-                    bytecode.addConstZero(expectedType);
+                if (targetType != CtClass.voidType && targetType != null) {
+                    bytecode.addConstZero(targetType);
+                    return new CompileVisitResult(targetType);
                 }
-            } else if (!nativeMethod.getReturnType().getName().equals(expectedType.getName())) {
-                JavassistUtil.addCast(bytecode, ctReturnType, expectedType);
+                return new CompileVisitResult(CtClass.voidType);
+            } else {
+                if (targetType != null && !ctReturnType.getName().equals(targetType.getName())) {
+                    JavassistUtil.addCast(bytecode, ctReturnType, targetType);
+                    return new CompileVisitResult(targetType);
+                }
+                return new CompileVisitResult(ctReturnType);
             }
         } else {
             throw new UnsupportedOperationException("Not supporting non-Java functions yet");
         }
-        return null;
     }
 
     @Override
