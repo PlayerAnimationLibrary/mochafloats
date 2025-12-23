@@ -25,6 +25,7 @@ package team.unnamed.mocha.util.network;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
+import org.jetbrains.annotations.Nullable;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -63,7 +64,7 @@ public class ProtocolUtils {
         return constants[ordinal];
     }
 
-    public static String readString(ByteBuf buf) {
+    public static @Nullable String readString(ByteBuf buf) {
         int length = VarIntUtils.readVarInt(buf);
         if (length <= 0) return null;
         String str = buf.toString(buf.readerIndex(), length, StandardCharsets.UTF_8);
@@ -71,7 +72,12 @@ public class ProtocolUtils {
         return str;
     }
 
-    public static void writeString(ByteBuf buf, String str) {
+    public static void writeString(ByteBuf buf, @Nullable String str) {
+        if (str == null) {
+            VarIntUtils.writeVarInt(buf, 0);
+            return;
+        }
+
         int size = ByteBufUtil.utf8Bytes(str);
         VarIntUtils.writeVarInt(buf, size);
         buf.writeCharSequence(str, StandardCharsets.UTF_8);
