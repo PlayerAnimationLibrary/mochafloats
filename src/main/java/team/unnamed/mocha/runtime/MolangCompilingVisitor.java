@@ -48,6 +48,7 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResult> {
@@ -635,7 +636,7 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
             // load instance
             if (!isStatic) {
                 final Object object = javaFunction.object();
-                final String fieldName = object.getClass().getSimpleName().toLowerCase() + Integer.toHexString(object.hashCode());
+                final String fieldName = object.getClass().getSimpleName().toLowerCase(Locale.ROOT) + Integer.toHexString(object.hashCode());
                 requirements.put(fieldName, object);
 
                 final CtClass requirementType;
