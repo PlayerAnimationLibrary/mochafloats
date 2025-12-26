@@ -29,6 +29,7 @@ import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.Spliterator;
@@ -68,7 +69,7 @@ public class CaseInsensitiveStringHashMap<V> extends HashMap<String, V> {
 
     private static <T> T lowercase(T key) {
         //noinspection unchecked
-        return key instanceof String ? ((T) ((String) key).toLowerCase()) : key;
+        return key instanceof String ? ((T) ((String) key).toLowerCase(Locale.ROOT)) : key;
     }
 
     private static <V> Map<? extends String, ? extends V> lowercaseMap(Map<? extends String, ? extends V> m) {

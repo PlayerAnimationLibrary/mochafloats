@@ -28,6 +28,7 @@ import org.jetbrains.annotations.NotNull;
 import team.unnamed.mocha.util.ExprBytesUtils;
 import team.unnamed.mocha.util.network.ProtocolUtils;
 
+import java.util.Locale;
 import java.util.Objects;
 
 /**
@@ -52,7 +53,7 @@ public final class IdentifierExpression implements Expression {
     public IdentifierExpression(final @NotNull String name) {
         Objects.requireNonNull(name, "name");
 
-        this.name = name.toLowerCase(); // case-insensitive
+        this.name = name.toLowerCase(Locale.ROOT); // case-insensitive
     }
 
     /**

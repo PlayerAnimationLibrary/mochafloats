@@ -27,6 +27,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.util.Locale;
 
 import static java.util.Objects.requireNonNull;
 
@@ -133,7 +134,7 @@ final class MolangLexerImpl implements MolangLexer {
             } while (Characters.isValidForWordContinuation(c = read())); // [A-z_0-9]
             String word = builder.toString();
             TokenKind kind;
-            switch (word.toLowerCase()) {
+            switch (word.toLowerCase(Locale.ROOT)) {
                 //@formatter:off
                 case "break": kind = TokenKind.BREAK; break;
                 case "continue": kind = TokenKind.CONTINUE; break;
