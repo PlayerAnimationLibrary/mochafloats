@@ -15,7 +15,7 @@ repositories {
 }
 
 dependencies {
-    implementation api("io.netty:netty-buffer:4.2.9.Final")
+    implementation api("io.netty:netty-buffer:4.2.10.Final")
     api("org.javassist:javassist:3.30.2-GA")
     compileOnlyApi("org.jetbrains:annotations:26.0.2-1")
 
