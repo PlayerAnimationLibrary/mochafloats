@@ -49,6 +49,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import static java.lang.constant.ConstantDescs.*;
 import static team.unnamed.mocha.util.ClassFileUtil.*;
 
 final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResult> {
@@ -61,6 +62,8 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
     private final Map<String, Integer> argumentParameterIndexes;
 
     private final Map<String, Integer> localsByName = new CaseInsensitiveStringHashMap<>();
+
+    private final ExpressionVisitor<Value> scopeResolver;
 
     /**
      * The method return type
@@ -81,6 +84,28 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
 
         this.methodReturnType = classDescOf(method.getReturnType());
         expectedType = methodReturnType;
+
+        this.scopeResolver = new ExpressionVisitor<>() {
+            @Override
+            public @NotNull Value visitIdentifier(final @NotNull IdentifierExpression expression) {
+                return functionCompileState.scope().get(expression.name());
+            }
+
+            @Override
+            public @NotNull Value visitAccess(final @NotNull AccessExpression expression) {
+                final Value object = expression.object().visit(this);
+                if (object instanceof ObjectValue) {
+                    return ((ObjectValue) object).get(expression.property());
+                } else {
+                    return NumberValue.zero();
+                }
+            }
+
+            @Override
+            public @NotNull Value visit(final @NotNull Expression expression) {
+                return NumberValue.zero();
+            }
+        };
     }
 
     @Override
@@ -190,7 +215,7 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
                 expression.right().visit(this);
                 expectedType = currentExpectedType;
                 codeBuilder.fadd();
-                return new CompileVisitResult(CD_float);
+                return CompileVisitResult.FLOAT;
             }
             case SUB: {
                 expectedType = CD_float;
@@ -198,7 +223,7 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
                 expression.right().visit(this);
                 expectedType = currentExpectedType;
                 codeBuilder.fsub();
-                return new CompileVisitResult(CD_float);
+                return CompileVisitResult.FLOAT;
             }
             case MUL: {
                 expectedType = CD_float;
@@ -206,7 +231,7 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
                 expression.right().visit(this);
                 expectedType = currentExpectedType;
                 codeBuilder.fmul();
-                return new CompileVisitResult(CD_float);
+                return CompileVisitResult.FLOAT;
             }
             case DIV: {
                 expectedType = CD_float;
@@ -214,7 +239,7 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
                 expression.right().visit(this);  // pushes rhs value to stack
                 expectedType = currentExpectedType;
                 codeBuilder.fdiv();
-                return new CompileVisitResult(CD_float);
+                return CompileVisitResult.FLOAT;
             }
             case ARROW:
             case NULL_COALESCE:
@@ -234,11 +259,11 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
         final float value = expression.value();
         if (expectedType != null && expectedType.equals(CD_void)) {
             // nothing!
-            return new CompileVisitResult(CD_void);
+            return CompileVisitResult.VOID;
         } else if (expectedType == null || expectedType.equals(CD_float)) {
             // expects a float, happy!
             codeBuilder.loadConstant(value);
-            return new CompileVisitResult(CD_float);
+            return CompileVisitResult.FLOAT;
         } else if (expectedType.equals(CD_boolean)) {
             // expects a boolean, push boolean
             if (value != 0.0D) {
@@ -246,19 +271,19 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
             } else {
                 codeBuilder.iconst_0();
             }
-            return new CompileVisitResult(CD_boolean);
+            return CompileVisitResult.BOOLEAN;
         } else if (expectedType.equals(CD_int)) {
             // expects an int, push int
             codeBuilder.loadConstant((int) value);
-            return new CompileVisitResult(CD_int);
+            return CompileVisitResult.INT;
         } else if (expectedType.equals(CD_long)) {
             // expects a long, push long
             codeBuilder.loadConstant((long) value);
-            return new CompileVisitResult(CD_long);
+            return CompileVisitResult.LONG;
         } else if (expectedType.equals(CD_double)) {
             // expects a double, push double
             codeBuilder.loadConstant((double) value);
-            return new CompileVisitResult(CD_double);
+            return CompileVisitResult.DOUBLE;
         } else {
             System.err.println("[warning] expected type " + expectedType + " has no possible cast from float (" + expression + ")");
             // evaluate to zero
@@ -271,11 +296,11 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
     public @NotNull CompileVisitResult visitString(final @NotNull StringExpression expression) {
         if (expectedType != null && expectedType.equals(CD_void)) {
             // nothing!
-            return new CompileVisitResult(CD_void);
+            return CompileVisitResult.VOID;
         } else if (expectedType == null || expectedType.equals(CD_String)) {
             // expected a string, happy
             codeBuilder.loadConstant(expression.value());
-            return new CompileVisitResult(CD_String);
+            return CompileVisitResult.STRING;
         } else {
             // evaluate to zero
             addConstZero(codeBuilder, expectedType);
@@ -300,7 +325,7 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
                     // like: !query.print('hello')
                     // won't push anything since expectedType is set to voidType
                     expression.expression().visit(this);
-                    return new CompileVisitResult(CD_void);
+                    return CompileVisitResult.VOID;
                 }
 
                 final ClassDesc currentExpectedType = expectedType;
@@ -332,7 +357,7 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
                     codeBuilder.labelBinding(pushZero);
                     codeBuilder.iconst_0();
                     codeBuilder.labelBinding(end);
-                    return new CompileVisitResult(CD_boolean);
+                    return CompileVisitResult.BOOLEAN;
                 }
 
                 Label pushConst0 = codeBuilder.newLabel();
@@ -455,33 +480,11 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
                 } else {
                     codeBuilder.fload(localIndex);
                 }
-                return new CompileVisitResult(CD_float);
+                return CompileVisitResult.FLOAT;
             }
         }
 
-        final Scope scope = functionCompileState.scope();
-        final Value objectValue = objectExpr.visit(new ExpressionVisitor<Value>() {
-            @Override
-            public @NotNull Value visitIdentifier(final @NotNull IdentifierExpression expression) {
-                final String name = expression.name();
-                return scope.get(name);
-            }
-
-            @Override
-            public @NotNull Value visitAccess(final @NotNull AccessExpression expression) {
-                final Value object = expression.object().visit(this);
-                if (object instanceof ObjectValue) {
-                    return ((ObjectValue) object).get(expression.property());
-                } else {
-                    return NumberValue.zero();
-                }
-            }
-
-            @Override
-            public @NotNull Value visit(final @NotNull Expression expression) {
-                return NumberValue.zero();
-            }
-        });
+        final Value objectValue = objectExpr.visit(this.scopeResolver);
 
         if (objectValue instanceof ObjectValue) {
             final ObjectValue actualObjectValue = (ObjectValue) objectValue;
@@ -512,36 +515,14 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
     @Override
     public CompileVisitResult visitCall(final @NotNull CallExpression expression) {
         final ClassDesc targetType = this.expectedType;
-        final Scope scope = functionCompileState.scope();
         final Expression functionExpr = expression.function();
 
-        final Value functionValue = functionExpr.visit(new ExpressionVisitor<Value>() {
-            @Override
-            public @NotNull Value visitIdentifier(final @NotNull IdentifierExpression expression) {
-                final String name = expression.name();
-                return scope.get(name);
-            }
-
-            @Override
-            public @NotNull Value visitAccess(final @NotNull AccessExpression expression) {
-                final Value object = expression.object().visit(this);
-                if (object instanceof ObjectValue) {
-                    return ((ObjectValue) object).get(expression.property());
-                } else {
-                    return NumberValue.zero();
-                }
-            }
-
-            @Override
-            public @NotNull Value visit(final @NotNull Expression expression) {
-                return NumberValue.zero();
-            }
-        });
+        final Value functionValue = functionExpr.visit(this.scopeResolver);
 
         if (!(functionValue instanceof Function<?>)) {
             // not a function, just add 0
             codeBuilder.fconst_0();
-            return new CompileVisitResult(CD_float);
+            return CompileVisitResult.FLOAT;
         }
 
         final Function<?> function = (Function<?>) functionValue;
@@ -625,7 +606,7 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
                     addConstZero(codeBuilder, targetType);
                     return new CompileVisitResult(targetType);
                 }
-                return new CompileVisitResult(CD_void);
+                return CompileVisitResult.VOID;
             } else {
                 if (targetType != null && !returnTypeDesc.equals(targetType)) {
                     ClassFileUtil.addCast(codeBuilder, returnTypeDesc, targetType);

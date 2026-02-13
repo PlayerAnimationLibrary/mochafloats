@@ -24,11 +24,19 @@
 package team.unnamed.mocha.runtime;
 
 import org.jetbrains.annotations.Nullable;
-import team.unnamed.mocha.util.ClassFileUtil;
 
 import java.lang.constant.ClassDesc;
+import java.lang.constant.ConstantDescs;
 
 final class CompileVisitResult {
+    static final CompileVisitResult FLOAT = new CompileVisitResult(ConstantDescs.CD_float);
+    static final CompileVisitResult DOUBLE = new CompileVisitResult(ConstantDescs.CD_double);
+    static final CompileVisitResult INT = new CompileVisitResult(ConstantDescs.CD_int);
+    static final CompileVisitResult LONG = new CompileVisitResult(ConstantDescs.CD_long);
+    static final CompileVisitResult BOOLEAN = new CompileVisitResult(ConstantDescs.CD_boolean);
+    static final CompileVisitResult VOID = new CompileVisitResult(ConstantDescs.CD_void);
+    static final CompileVisitResult STRING = new CompileVisitResult(ConstantDescs.CD_String);
+
     private final ClassDesc lastPushedType;
     private final boolean returned;
 
@@ -50,7 +58,7 @@ final class CompileVisitResult {
     }
 
     public boolean isString() {
-        return lastPushedType != null && lastPushedType.equals(ClassFileUtil.CD_String);
+        return lastPushedType != null && lastPushedType.equals(ConstantDescs.CD_String);
     }
 
     public boolean is(final @Nullable ClassDesc type) {

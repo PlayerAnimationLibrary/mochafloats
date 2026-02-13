@@ -148,7 +148,7 @@ public final class MolangCompiler {
             {
                 int maxLocals = 1; // 1: this
                 for (final ClassDesc paramType : paramDescs) {
-                    if (paramType.equals(ClassFileUtil.CD_double) || paramType.equals(ClassFileUtil.CD_long)) {
+                    if (paramType.equals(ConstantDescs.CD_double) || paramType.equals(ConstantDescs.CD_long)) {
                         maxLocals += 2;
                     } else {
                         maxLocals++;
@@ -188,7 +188,7 @@ public final class MolangCompiler {
                         if (lastVisitResult == null || !returnDesc.equals(lastVisitResult.lastPushedType())) {
                             ClassFileUtil.addCast(
                                     codeBuilder,
-                                    lastVisitResult == null ? ClassFileUtil.CD_float : lastVisitResult.lastPushedType(),
+                                    lastVisitResult == null ? ConstantDescs.CD_float : lastVisitResult.lastPushedType(),
                                     returnDesc
                             );
                         }

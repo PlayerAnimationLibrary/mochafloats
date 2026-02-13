@@ -34,70 +34,52 @@ import java.lang.constant.MethodTypeDesc;
 import java.util.Map;
 import java.util.Set;
 
+import static java.lang.constant.ConstantDescs.*;
 import static java.util.Objects.requireNonNull;
 
 public class ClassFileUtil {
 
-    public static final ClassDesc CD_void = ConstantDescs.CD_void;
-    public static final ClassDesc CD_boolean = ConstantDescs.CD_boolean;
-    public static final ClassDesc CD_byte = ConstantDescs.CD_byte;
-    public static final ClassDesc CD_char = ConstantDescs.CD_char;
-    public static final ClassDesc CD_short = ConstantDescs.CD_short;
-    public static final ClassDesc CD_int = ConstantDescs.CD_int;
-    public static final ClassDesc CD_long = ConstantDescs.CD_long;
-    public static final ClassDesc CD_float = ConstantDescs.CD_float;
-    public static final ClassDesc CD_double = ConstantDescs.CD_double;
-    public static final ClassDesc CD_String = ConstantDescs.CD_String;
-    public static final ClassDesc CD_Object = ConstantDescs.CD_Object;
+    // Shared wrapper ClassDesc constants to avoid repeated ClassDesc.of() allocations
+    private static final ClassDesc CD_W_Boolean = ClassDesc.of("java.lang.Boolean");
+    private static final ClassDesc CD_W_Byte = ClassDesc.of("java.lang.Byte");
+    private static final ClassDesc CD_W_Character = ClassDesc.of("java.lang.Character");
+    private static final ClassDesc CD_W_Short = ClassDesc.of("java.lang.Short");
+    private static final ClassDesc CD_W_Integer = ClassDesc.of("java.lang.Integer");
+    private static final ClassDesc CD_W_Long = ClassDesc.of("java.lang.Long");
+    private static final ClassDesc CD_W_Float = ClassDesc.of("java.lang.Float");
+    private static final ClassDesc CD_W_Double = ClassDesc.of("java.lang.Double");
 
     private static final Set<ClassDesc> WRAPPER_TYPES = Set.of(
-            ClassDesc.of("java.lang.Boolean"),
-            ClassDesc.of("java.lang.Byte"),
-            ClassDesc.of("java.lang.Character"),
-            ClassDesc.of("java.lang.Short"),
-            ClassDesc.of("java.lang.Integer"),
-            ClassDesc.of("java.lang.Long"),
-            ClassDesc.of("java.lang.Float"),
-            ClassDesc.of("java.lang.Double")
+            CD_W_Boolean, CD_W_Byte, CD_W_Character, CD_W_Short,
+            CD_W_Integer, CD_W_Long, CD_W_Float, CD_W_Double
     );
 
     private static final Map<ClassDesc, ClassDesc> PRIMITIVE_TO_WRAPPER = Map.of(
-            CD_boolean, ClassDesc.of("java.lang.Boolean"),
-            CD_byte, ClassDesc.of("java.lang.Byte"),
-            CD_char, ClassDesc.of("java.lang.Character"),
-            CD_short, ClassDesc.of("java.lang.Short"),
-            CD_int, ClassDesc.of("java.lang.Integer"),
-            CD_long, ClassDesc.of("java.lang.Long"),
-            CD_float, ClassDesc.of("java.lang.Float"),
-            CD_double, ClassDesc.of("java.lang.Double")
+            CD_boolean, CD_W_Boolean, CD_byte, CD_W_Byte,
+            CD_char, CD_W_Character, CD_short, CD_W_Short,
+            CD_int, CD_W_Integer, CD_long, CD_W_Long,
+            CD_float, CD_W_Float, CD_double, CD_W_Double
     );
 
     private static final Map<ClassDesc, String> WRAPPER_UNBOX_METHOD = Map.of(
-            ClassDesc.of("java.lang.Boolean"), "booleanValue",
-            ClassDesc.of("java.lang.Byte"), "byteValue",
-            ClassDesc.of("java.lang.Character"), "charValue",
-            ClassDesc.of("java.lang.Short"), "shortValue",
-            ClassDesc.of("java.lang.Integer"), "intValue",
-            ClassDesc.of("java.lang.Long"), "longValue",
-            ClassDesc.of("java.lang.Float"), "floatValue",
-            ClassDesc.of("java.lang.Double"), "doubleValue"
+            CD_W_Boolean, "booleanValue", CD_W_Byte, "byteValue",
+            CD_W_Character, "charValue", CD_W_Short, "shortValue",
+            CD_W_Integer, "intValue", CD_W_Long, "longValue",
+            CD_W_Float, "floatValue", CD_W_Double, "doubleValue"
     );
 
-    private static final Map<ClassDesc, ClassDesc> WRAPPER_TO_PRIMITIVE = Map.of(
-            ClassDesc.of("java.lang.Boolean"), CD_boolean,
-            ClassDesc.of("java.lang.Byte"), CD_byte,
-            ClassDesc.of("java.lang.Character"), CD_char,
-            ClassDesc.of("java.lang.Short"), CD_short,
-            ClassDesc.of("java.lang.Integer"), CD_int,
-            ClassDesc.of("java.lang.Long"), CD_long,
-            ClassDesc.of("java.lang.Float"), CD_float,
-            ClassDesc.of("java.lang.Double"), CD_double
-    );
+    // ClassValue cache for Class -> ClassDesc mapping (lock-free, GC-friendly)
+    private static final ClassValue<ClassDesc> CLASS_DESC_CACHE = new ClassValue<>() {
+        @Override
+        protected ClassDesc computeValue(final @NotNull Class<?> type) {
+            return type.describeConstable().orElseThrow(
+                    () -> new IllegalStateException("Cannot create ClassDesc for: " + type)
+            );
+        }
+    };
 
     public static @NotNull ClassDesc classDescOf(final @NotNull Class<?> javaClass) {
-        return javaClass.describeConstable().orElseThrow(
-                () -> new IllegalStateException("Cannot create ClassDesc for: " + javaClass)
-        );
+        return CLASS_DESC_CACHE.get(javaClass);
     }
 
     public static boolean isWrapper(final @NotNull ClassDesc type) {
