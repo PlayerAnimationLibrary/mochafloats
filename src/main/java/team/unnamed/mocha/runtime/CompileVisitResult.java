@@ -23,19 +23,21 @@
  */
 package team.unnamed.mocha.runtime;
 
-import javassist.CtClass;
 import org.jetbrains.annotations.Nullable;
+import team.unnamed.mocha.util.ClassFileUtil;
+
+import java.lang.constant.ClassDesc;
 
 final class CompileVisitResult {
-    private final CtClass lastPushedType;
+    private final ClassDesc lastPushedType;
     private final boolean returned;
 
-    public CompileVisitResult(final @Nullable CtClass lastPushedType, final boolean returned) {
+    public CompileVisitResult(final @Nullable ClassDesc lastPushedType, final boolean returned) {
         this.lastPushedType = lastPushedType;
         this.returned = returned;
     }
 
-    public CompileVisitResult(final @Nullable CtClass lastPushedType) {
+    public CompileVisitResult(final @Nullable ClassDesc lastPushedType) {
         this(lastPushedType, false);
     }
 
@@ -43,15 +45,15 @@ final class CompileVisitResult {
         return returned;
     }
 
-    public @Nullable CtClass lastPushedType() {
+    public @Nullable ClassDesc lastPushedType() {
         return lastPushedType;
     }
 
     public boolean isString() {
-        return lastPushedType != null && lastPushedType.getName().equals("java.lang.String");
+        return lastPushedType != null && lastPushedType.equals(ClassFileUtil.CD_String);
     }
 
-    public boolean is(final @Nullable CtClass type) {
+    public boolean is(final @Nullable ClassDesc type) {
         return lastPushedType != null && lastPushedType.equals(type);
     }
 }

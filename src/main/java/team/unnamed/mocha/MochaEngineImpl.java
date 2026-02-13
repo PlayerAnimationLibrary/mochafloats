@@ -23,7 +23,6 @@
  */
 package team.unnamed.mocha;
 
-import javassist.ClassPool;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import team.unnamed.mocha.parser.MolangParser;
@@ -60,7 +59,7 @@ final class MochaEngineImpl<T> implements MochaEngine<T> {
         scopeBuilder.accept(builder);
         this.scope = builder.build();
         this.entity = entity;
-        this.compiler = new MolangCompiler(entity, getClass().getClassLoader(), scope);
+        this.compiler = new MolangCompiler(entity, scope);
     }
 
     @Override
@@ -195,12 +194,6 @@ final class MochaEngineImpl<T> implements MochaEngine<T> {
     @Override
     public <F extends MochaCompiledFunction> @NotNull F compile(final @NotNull List<Expression> parsed, final @NotNull Class<F> interfaceType) {
         return compiler.compile(parsed, interfaceType);
-    }
-
-    @Override
-    @Deprecated(forRemoval = true)
-    public @NotNull ClassPool classPool() {
-        return compiler.classPool();
     }
 
     @Override
