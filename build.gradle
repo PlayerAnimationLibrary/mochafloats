@@ -30,7 +30,6 @@ dependencies {
 }
 
 tasks.register('generateExpectations', Exec) {
-    onlyIf {false}
     commandLine 'node', 'scripts/generate_expectations.js'
 }
 
