@@ -23,12 +23,11 @@
  */
 package team.unnamed.mocha.runtime;
 
-import javassist.ClassPool;
-import javassist.CtClass;
-import javassist.bytecode.Bytecode;
 import org.jetbrains.annotations.NotNull;
 import team.unnamed.mocha.util.CaseInsensitiveStringHashMap;
 
+import java.lang.classfile.CodeBuilder;
+import java.lang.constant.ClassDesc;
 import java.lang.reflect.Method;
 import java.util.Map;
 
@@ -37,9 +36,8 @@ import static java.util.Objects.requireNonNull;
 final class FunctionCompileState {
     private final MolangCompiler compiler;
 
-    private final ClassPool classPool;
-    private final CtClass ctClass;
-    private final Bytecode bytecode;
+    private final ClassDesc classDesc;
+    private final CodeBuilder codeBuilder;
     private final Method method;
 
     private final Map<String, Object> requirements = new CaseInsensitiveStringHashMap<>();
@@ -49,16 +47,15 @@ final class FunctionCompileState {
 
     FunctionCompileState(
             MolangCompiler compiler,
-            ClassPool classPool,
-            CtClass ctClass, Bytecode bytecode,
+            ClassDesc classDesc,
+            CodeBuilder codeBuilder,
             Method method,
             Scope scope,
             Map<String, Integer> argumentParameterIndexes
     ) {
         this.compiler = requireNonNull(compiler, "compiler");
-        this.classPool = requireNonNull(classPool, "classPool");
-        this.ctClass = requireNonNull(ctClass, "ctClass");
-        this.bytecode = requireNonNull(bytecode, "bytecode");
+        this.classDesc = requireNonNull(classDesc, "classDesc");
+        this.codeBuilder = requireNonNull(codeBuilder, "codeBuilder");
         this.method = requireNonNull(method, "method");
         this.scope = requireNonNull(scope, "scope");
         this.argumentParameterIndexes = requireNonNull(argumentParameterIndexes, "argumentParameterIndexes");
@@ -68,16 +65,12 @@ final class FunctionCompileState {
         return compiler;
     }
 
-    public @NotNull ClassPool classPool() {
-        return classPool;
+    public @NotNull ClassDesc classDesc() {
+        return classDesc;
     }
 
-    public @NotNull CtClass type() {
-        return ctClass;
-    }
-
-    public @NotNull Bytecode bytecode() {
-        return bytecode;
+    public @NotNull CodeBuilder codeBuilder() {
+        return codeBuilder;
     }
 
     public @NotNull Method method() {

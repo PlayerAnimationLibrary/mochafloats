@@ -23,19 +23,29 @@
  */
 package team.unnamed.mocha.runtime;
 
-import javassist.CtClass;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.constant.ClassDesc;
+import java.lang.constant.ConstantDescs;
+
 final class CompileVisitResult {
-    private final CtClass lastPushedType;
+    static final CompileVisitResult FLOAT = new CompileVisitResult(ConstantDescs.CD_float);
+    static final CompileVisitResult DOUBLE = new CompileVisitResult(ConstantDescs.CD_double);
+    static final CompileVisitResult INT = new CompileVisitResult(ConstantDescs.CD_int);
+    static final CompileVisitResult LONG = new CompileVisitResult(ConstantDescs.CD_long);
+    static final CompileVisitResult BOOLEAN = new CompileVisitResult(ConstantDescs.CD_boolean);
+    static final CompileVisitResult VOID = new CompileVisitResult(ConstantDescs.CD_void);
+    static final CompileVisitResult STRING = new CompileVisitResult(ConstantDescs.CD_String);
+
+    private final ClassDesc lastPushedType;
     private final boolean returned;
 
-    public CompileVisitResult(final @Nullable CtClass lastPushedType, final boolean returned) {
+    public CompileVisitResult(final @Nullable ClassDesc lastPushedType, final boolean returned) {
         this.lastPushedType = lastPushedType;
         this.returned = returned;
     }
 
-    public CompileVisitResult(final @Nullable CtClass lastPushedType) {
+    public CompileVisitResult(final @Nullable ClassDesc lastPushedType) {
         this(lastPushedType, false);
     }
 
@@ -43,15 +53,15 @@ final class CompileVisitResult {
         return returned;
     }
 
-    public @Nullable CtClass lastPushedType() {
+    public @Nullable ClassDesc lastPushedType() {
         return lastPushedType;
     }
 
     public boolean isString() {
-        return lastPushedType != null && lastPushedType.getName().equals("java.lang.String");
+        return lastPushedType != null && lastPushedType.equals(ConstantDescs.CD_String);
     }
 
-    public boolean is(final @Nullable CtClass type) {
+    public boolean is(final @Nullable ClassDesc type) {
         return lastPushedType != null && lastPushedType.equals(type);
     }
 }

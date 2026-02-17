@@ -23,19 +23,6 @@
  */
 package team.unnamed.mocha.runtime;
 
-import javassist.CannotCompileException;
-import javassist.ClassPool;
-import javassist.CtClass;
-import javassist.CtConstructor;
-import javassist.CtField;
-import javassist.CtMethod;
-import javassist.NotFoundException;
-import javassist.bytecode.BadBytecode;
-import javassist.bytecode.Bytecode;
-import javassist.bytecode.Descriptor;
-import javassist.bytecode.MethodInfo;
-import javassist.bytecode.StackMapTable;
-import javassist.bytecode.stackmap.MapMaker;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -43,9 +30,13 @@ import team.unnamed.mocha.parser.ast.Expression;
 import team.unnamed.mocha.runtime.compiled.MochaCompiledFunction;
 import team.unnamed.mocha.runtime.compiled.Named;
 import team.unnamed.mocha.util.CaseInsensitiveStringHashMap;
-import team.unnamed.mocha.util.JavassistUtil;
+import team.unnamed.mocha.util.ClassFileUtil;
 
-import java.io.IOException;
+import java.lang.classfile.ClassFile;
+import java.lang.constant.ClassDesc;
+import java.lang.constant.ConstantDescs;
+import java.lang.constant.MethodTypeDesc;
+import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -57,31 +48,23 @@ import java.util.Random;
 import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
+import static team.unnamed.mocha.util.ClassFileUtil.classDescOf;
 
 @ApiStatus.Internal
 public final class MolangCompiler {
     private static final Random RANDOM = new Random();
 
     private final Object entity;
-    private final ClassLoader classLoader;
-    private final ClassPool classPool;
-
     private final Scope scope;
     private Consumer<byte @NotNull []> postCompile;
 
-    public MolangCompiler(final @Nullable Object entity, final @NotNull ClassLoader classLoader, final @NotNull Scope scope) {
+    public MolangCompiler(final @Nullable Object entity, final @NotNull Scope scope) {
         this.entity = entity;
-        this.classLoader = requireNonNull(classLoader, "classLoader");
-        this.classPool = ClassPool.getDefault();
         this.scope = requireNonNull(scope, "scope");
     }
 
     public @Nullable Object entity() {
         return entity;
-    }
-
-    public @NotNull ClassPool classPool() {
-        return classPool;
     }
 
     public void postCompile(final @Nullable Consumer<byte @NotNull []> postCompile) {
@@ -118,12 +101,12 @@ public final class MolangCompiler {
         }
 
         final Map<String, Integer> argumentParameterIndexes = new CaseInsensitiveStringHashMap<>();
-        final CtClass[] ctParameters;
+        final ClassDesc[] paramDescs;
 
         // check method parameter types
         {
             final Parameter[] parameters = implementedMethod.getParameters();
-            ctParameters = new CtClass[parameters.length];
+            paramDescs = new ClassDesc[parameters.length];
 
             for (int i = 0; i < parameters.length; ++i) {
                 final Parameter parameter = parameters[i];
@@ -140,157 +123,134 @@ public final class MolangCompiler {
                 }
 
                 argumentParameterIndexes.put(name, i);
-                try {
-                    ctParameters[i] = classPool.get(parameter.getType().getName());
-                } catch (NotFoundException e) {
-                    throw new RuntimeException(e);
-                }
+                paramDescs[i] = classDescOf(parameter.getType());
             }
         }
 
-        final CtClass interfaceCtClass = JavassistUtil.getClassUnchecked(classPool, clazz);
+        final ClassDesc interfaceDesc = classDescOf(clazz);
         final String scriptClassName = getClass().getPackage().getName() + ".MolangFunctionImpl_" + clazz.getSimpleName() + "_" + implementedMethod.getName()
                 + "_" + Long.toHexString(System.currentTimeMillis()) + "_" + Integer.toHexString(RANDOM.nextInt(2024));
 
-        final CtClass scriptCtClass = classPool.makeClass(scriptClassName);
-        scriptCtClass.addInterface(interfaceCtClass);
-        scriptCtClass.setModifiers(Modifier.PUBLIC);
+        final ClassDesc scriptClassDesc = ClassDesc.of(scriptClassName);
+        final ClassDesc returnDesc = classDescOf(implementedMethod.getReturnType());
+        final MethodTypeDesc mainMethodTypeDesc = MethodTypeDesc.of(returnDesc, paramDescs);
 
-        final Class<?> returnType = implementedMethod.getReturnType();
-        final CtClass returnCtType = JavassistUtil.getClassUnchecked(classPool, returnType);
+        // We need to capture requirements and other state from within the lambda
+        final Map<String, Object> requirements = new CaseInsensitiveStringHashMap<>();
+        final Method finalMethod = implementedMethod;
 
-        final Bytecode bytecode = new Bytecode(scriptCtClass.getClassFile().getConstPool());
-        final FunctionCompileState compileState = new FunctionCompileState(this, classPool, scriptCtClass, bytecode, implementedMethod, scope, argumentParameterIndexes);
+        final byte[] classBytes = ClassFile.of().build(scriptClassDesc, classBuilder -> {
+            classBuilder.withFlags(Modifier.PUBLIC | Modifier.FINAL);
+            classBuilder.withInterfaceSymbols(interfaceDesc);
 
-        // compute initial max locals
-        {
-            int maxLocals = 1; // 1: this
-            for (final CtClass paramType : ctParameters) {
-                if (paramType == CtClass.doubleType || paramType == CtClass.longType) {
-                    maxLocals += 2; // doubles and longs take 2 places
+            // compute initial max locals
+            final int initialMaxLocals;
+            {
+                int maxLocals = 1; // 1: this
+                for (final ClassDesc paramType : paramDescs) {
+                    if (paramType.equals(ConstantDescs.CD_double) || paramType.equals(ConstantDescs.CD_long)) {
+                        maxLocals += 2;
+                    } else {
+                        maxLocals++;
+                    }
+                }
+                initialMaxLocals = maxLocals;
+            }
+
+            // Add main method
+            classBuilder.withMethod(
+                    finalMethod.getName(),
+                    mainMethodTypeDesc,
+                    Modifier.PUBLIC | Modifier.FINAL,
+                    methodBuilder -> methodBuilder.withCode(codeBuilder -> {
+                final FunctionCompileState compileState = new FunctionCompileState(
+                        this, scriptClassDesc, codeBuilder, finalMethod, scope, argumentParameterIndexes
+                );
+                compileState.maxLocals(initialMaxLocals);
+
+                // Copy requirements reference so visitor can populate it
+                final Map<String, Object> stateRequirements = compileState.requirements();
+
+                if (expressions.isEmpty()) {
+                    ClassFileUtil.addConstZero(codeBuilder, returnDesc);
+                    ClassFileUtil.addReturn(codeBuilder, returnDesc);
                 } else {
-                    maxLocals++;
-                }
-            }
-            compileState.maxLocals(maxLocals);
-        }
+                    final MolangCompilingVisitor compiler = new MolangCompilingVisitor(compileState);
+                    CompileVisitResult lastVisitResult = null;
 
-        if (expressions.isEmpty()) {
-            // add only a "return 0", "return" or "return null" instruction
-            bytecode.addConstZero(returnCtType);
-            bytecode.addReturn(returnCtType);
-        } else {
-            final MolangCompilingVisitor compiler = new MolangCompilingVisitor(compileState);
-            CompileVisitResult lastVisitResult = null;
+                    final ExpressionInliner inliner = new ExpressionInliner(new ExpressionInterpreter<>(null, scope), scope);
 
-            final ExpressionInliner inliner = new ExpressionInliner(new ExpressionInterpreter<>(null, scope), scope);
+                    for (final Expression expression : expressions) {
+                        lastVisitResult = expression.visit(inliner).visit(compiler);
+                    }
 
-            for (final Expression expression : expressions) {
-                lastVisitResult = expression.visit(inliner).visit(compiler);
-            }
+                    if (lastVisitResult == null || !lastVisitResult.returned()) {
+                        if (lastVisitResult == null || !returnDesc.equals(lastVisitResult.lastPushedType())) {
+                            ClassFileUtil.addCast(
+                                    codeBuilder,
+                                    lastVisitResult == null ? ConstantDescs.CD_float : lastVisitResult.lastPushedType(),
+                                    returnDesc
+                            );
+                        }
 
-            if (lastVisitResult == null || !lastVisitResult.returned()) {
-                if (lastVisitResult == null || lastVisitResult.lastPushedType() != returnCtType) {
-                    JavassistUtil.addCast(
-                            bytecode,
-                            lastVisitResult == null ? CtClass.floatType : lastVisitResult.lastPushedType(),
-                            returnCtType
-                    );
+                        compiler.endVisit();
+                    }
                 }
 
-                compiler.endVisit();
-            }
-        }
+                // Copy requirements from compile state to outer map
+                requirements.putAll(stateRequirements);
+            }));
 
-        bytecode.setMaxLocals(compileState.maxLocals());
-
-        final MethodInfo method = new MethodInfo(scriptCtClass.getClassFile().getConstPool(), implementedMethod.getName(), Descriptor.ofMethod(returnCtType, ctParameters));
-        method.setAccessFlags(Modifier.PUBLIC | Modifier.FINAL);
-        method.setCodeAttribute(bytecode.toCodeAttribute());
-        final StackMapTable stackMapTable;
-
-        try {
-            method.getCodeAttribute().computeMaxStack();
-            stackMapTable = MapMaker.make(classPool, method);
-        } catch (final BadBytecode e) {
-            throw new IllegalStateException("Generated bad bytecode, open an issue at https://github.com/unnamed/mocha/issues", e);
-        }
-
-        if (stackMapTable != null) {
-            method.getCodeAttribute().setAttribute(stackMapTable);
-        }
-
-        try {
-            scriptCtClass.addMethod(CtMethod.make(method, scriptCtClass));
-        } catch (final CannotCompileException e) {
-            throw new IllegalStateException("Couldn't compile main function method", e);
-        }
-
-        final Map<String, Object> requirements = compileState.requirements();
-
-        // add fields for the requirements
-        for (final Map.Entry<String, Object> entry : requirements.entrySet()) {
-            final String fieldName = entry.getKey();
-            final Object fieldValue = entry.getValue();
-            final CtClass fieldType = JavassistUtil.getClassUnchecked(classPool, fieldValue.getClass());
-            try {
-                scriptCtClass.addField(new CtField(fieldType, fieldName, scriptCtClass));
-            } catch (final CannotCompileException e) {
-                throw new IllegalStateException("Couldn't compile field " + fieldName + " with type " + fieldType.getName(), e);
-            }
-        }
-
-        // add constructor that needs requirements and initializes them
-        final CtClass[] constructorParameterCtTypes = new CtClass[requirements.size()];
-        int j = 0;
-        for (final Map.Entry<String, Object> entry : requirements.entrySet()) {
-            constructorParameterCtTypes[j] = JavassistUtil.getClassUnchecked(classPool, entry.getValue().getClass());
-            ++j;
-        }
-
-        {
-            final CtConstructor ctConstructor = new CtConstructor(constructorParameterCtTypes, scriptCtClass);
-            final Bytecode constructorBytecode = new Bytecode(scriptCtClass.getClassFile().getConstPool());
-            constructorBytecode.addAload(0); // load this
-            constructorBytecode.addInvokespecial(JavassistUtil.getClassUnchecked(classPool, Object.class), "<init>", "()V"); // invoke superclass constructor
-            // put!
-            int parameterIndex = 0;
+            // Add fields for requirements (populated during method compilation above)
             for (final Map.Entry<String, Object> entry : requirements.entrySet()) {
                 final String fieldName = entry.getKey();
                 final Object fieldValue = entry.getValue();
-                constructorBytecode.addAload(0); // load this
-                constructorBytecode.addAload(parameterIndex + 1); // load parameter
-                constructorBytecode.addPutfield(scriptCtClass, fieldName, Descriptor.of(JavassistUtil.getClassUnchecked(classPool, fieldValue.getClass()))); // set!
-                parameterIndex++;
-            }
-            constructorBytecode.addReturn(null); // return
-            ctConstructor.getMethodInfo().setCodeAttribute(constructorBytecode.toCodeAttribute());
-            try {
-                ctConstructor.getMethodInfo().getCodeAttribute().computeMaxStack();
-            } catch (final BadBytecode e) {
-                throw new IllegalStateException("Generated bad bytecode, open an issue at https://github.com/unnamed/mocha/issues", e);
+                final ClassDesc fieldType = classDescOf(fieldValue.getClass());
+                classBuilder.withField(fieldName, fieldType, Modifier.PRIVATE);
             }
 
-            ctConstructor.getMethodInfo().getCodeAttribute().setMaxLocals(constructorParameterCtTypes.length + 1);
-            try {
-                scriptCtClass.addConstructor(ctConstructor);
-            } catch (final CannotCompileException e) {
-                throw new IllegalStateException("Couldn't compile script constructor", e);
+            // Add constructor
+            final ClassDesc[] constructorParamDescs = new ClassDesc[requirements.size()];
+            int j = 0;
+            for (final Map.Entry<String, Object> entry : requirements.entrySet()) {
+                constructorParamDescs[j] = classDescOf(entry.getValue().getClass());
+                ++j;
             }
-        }
+
+            final MethodTypeDesc constructorTypeDesc = MethodTypeDesc.of(ConstantDescs.CD_void, constructorParamDescs);
+            classBuilder.withMethod(
+                    ConstantDescs.INIT_NAME,
+                    constructorTypeDesc,
+                    Modifier.PUBLIC,
+                    methodBuilder -> methodBuilder.withCode(ctorCode -> {
+                ctorCode.aload(0);
+                ctorCode.invokespecial(ConstantDescs.CD_Object, ConstantDescs.INIT_NAME, ConstantDescs.MTD_void);
+
+                int parameterIndex = 0;
+                for (final Map.Entry<String, Object> entry : requirements.entrySet()) {
+                    final String fieldName = entry.getKey();
+                    final Object fieldValue = entry.getValue();
+                    final ClassDesc fieldType = classDescOf(fieldValue.getClass());
+                    ctorCode.aload(0); // this
+                    ctorCode.aload(parameterIndex + 1); // parameter
+                    ctorCode.putfield(scriptClassDesc, fieldName, fieldType);
+                    parameterIndex++;
+                }
+                ctorCode.return_();
+            }));
+        });
 
         if (postCompile != null) {
-            try {
-                postCompile.accept(scriptCtClass.toBytecode());
-            } catch (IOException | CannotCompileException e) {
-                throw new IllegalStateException("Couldn't collect script bytecode", e);
-            }
+            postCompile.accept(classBytes);
         }
+
         final Class<?> compiledClass;
         try {
-            compiledClass = classPool.toClass(scriptCtClass, getClass(), classLoader, null);
-        } catch (final Exception e) {
-            throw new IllegalStateException("Couldn't compile script class", e);
+            compiledClass = MethodHandles.lookup()
+                    .defineHiddenClass(classBytes, true, MethodHandles.Lookup.ClassOption.NESTMATE)
+                    .lookupClass();
+        } catch (final IllegalAccessException e) {
+            throw new IllegalStateException("Couldn't define hidden class", e);
         }
 
         // find the constructor with the requirements
