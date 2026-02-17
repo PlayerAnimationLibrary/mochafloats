@@ -21,96 +21,98 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-//package team.unnamed.mocha.runtime;
-//
-//import org.junit.jupiter.api.Assertions;
-//import org.junit.jupiter.api.Test;
-//import team.unnamed.mocha.MochaEngine;
-//
-//import java.io.BufferedReader;
-//import java.io.IOException;
-//import java.io.InputStream;
-//import java.io.InputStreamReader;
-//
-///**
-// * Compares the results of this library with the
-// * results of other libraries
-// */
-//public class CompareTest {
-//
-//    private static final MochaEngine<?> ENGINE = MochaEngine.createStandard();
-//
-//    //#region Helper code
-//    private static BufferedReader createResourceReader(String name) {
-//        InputStream stream = CompareTest.class
-//                .getClassLoader()
-//                .getResourceAsStream(name);
-//        if (stream == null) {
-//            throw new IllegalStateException("Resource not found: " + name);
-//        }
-//        return new BufferedReader(new InputStreamReader(stream));
-//    }
-//
-//    private static String nextNonEmpty(BufferedReader reader) throws IOException {
-//        String value;
-//        do {
-//            value = reader.readLine();
-//            if (value == null) {
-//                break;
-//            } else {
-//                value = value.trim();
-//            }
-//        } while (value.isEmpty() || value.charAt(0) == '#');
-//        return value;
-//    }
-//
-//    private static void compare(String expectationsName, String sourceName) throws IOException {
-//        try (BufferedReader source = createResourceReader(sourceName)) {
-//            try (BufferedReader expectations = createResourceReader(expectationsName)) {
-//                while (true) {
-//                    String expression = nextNonEmpty(source);
-//                    String expected = nextNonEmpty(expectations);
-//
-//                    if (expression == null || expected == null) {
-//                        // end reached
-//                        break;
-//                    }
-//
-//                    float expectedValue = Float.parseFloat(expected);
-//
-//                    // eval expression
-//                    final float result = ENGINE.eval(expression);
-//                    Assertions.assertEquals(
-//                            expectedValue,
-//                            result,
-//                            () -> "Incorrect result for INTERPRETED expression: " + expression
-//                    );
-//
-//                    // compile and eval expression
-//                    try {
-//                        final float compileResult = ENGINE.compile(expression).evaluate();
-//                        Assertions.assertEquals(
-//                                expectedValue,
-//                                compileResult,
-//                                () -> "Incorrect result for COMPILED expression: " + expression
-//                        );
-//                    } catch (Throwable e) {
-//                        throw new IllegalStateException("Error while compiling expression: " + expression, e);
-//                    }
-//                }
-//            }
-//        }
-//    }
-//
-//    /**
-//     * Compares this library results with MolangJS
-//     * of JannisX11
-//     * https://github.com/JannisX11/MolangJS
-//     */
-//    @Test
-//    public void compare_with_molangjs() throws IOException {
-//        compare("expectations.txt", "tests.txt");
-//    }
-//    //#endregion
-//
-//}
+package team.unnamed.mocha.runtime;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import team.unnamed.mocha.MochaEngine;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+
+/**
+ * Compares the results of this library with the
+ * results of other libraries
+ */
+public class CompareTest {
+
+    private static final MochaEngine<?> ENGINE = MochaEngine.createStandard();
+
+    //#region Helper code
+    private static BufferedReader createResourceReader(String name) {
+        InputStream stream = CompareTest.class
+                .getClassLoader()
+                .getResourceAsStream(name);
+        if (stream == null) {
+            throw new IllegalStateException("Resource not found: " + name);
+        }
+        return new BufferedReader(new InputStreamReader(stream));
+    }
+
+    private static String nextNonEmpty(BufferedReader reader) throws IOException {
+        String value;
+        do {
+            value = reader.readLine();
+            if (value == null) {
+                break;
+            } else {
+                value = value.trim();
+            }
+        } while (value.isEmpty() || value.charAt(0) == '#');
+        return value;
+    }
+
+    private static void compare(String expectationsName, String sourceName) throws IOException {
+        try (BufferedReader source = createResourceReader(sourceName)) {
+            try (BufferedReader expectations = createResourceReader(expectationsName)) {
+                while (true) {
+                    String expression = nextNonEmpty(source);
+                    String expected = nextNonEmpty(expectations);
+
+                    if (expression == null || expected == null) {
+                        // end reached
+                        break;
+                    }
+
+                    float expectedValue = Float.parseFloat(expected);
+
+                    // eval expression
+                    final float result = ENGINE.eval(expression);
+                    Assertions.assertEquals(
+                            expectedValue,
+                            result,
+                            0.001f,
+                            () -> "Incorrect result for INTERPRETED expression: " + expression
+                    );
+
+                    // compile and eval expression
+                    try {
+                        final float compileResult = ENGINE.compile(expression).evaluate();
+                        Assertions.assertEquals(
+                                expectedValue,
+                                compileResult,
+                                0.001f,
+                                () -> "Incorrect result for COMPILED expression: " + expression
+                        );
+                    } catch (Throwable e) {
+                        throw new IllegalStateException("Error while compiling expression: " + expression, e);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Compares this library results with MolangJS
+     * of JannisX11
+     * https://github.com/JannisX11/MolangJS
+     */
+    @Test
+    public void compare_with_molangjs() throws IOException {
+        compare("expectations.txt", "tests.txt");
+    }
+    //#endregion
+
+}
