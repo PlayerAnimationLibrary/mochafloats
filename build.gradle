@@ -30,7 +30,9 @@ dependencies {
 }
 
 tasks.register('generateExpectations', Exec) {
-    commandLine 'node', 'scripts/generate_expectations.js'
+    def nvmDir = file("${System.getenv('HOME')}/.nvm/versions/node")
+    executable nvmDir.isDirectory() ? "${nvmDir.listFiles().sort().last()}/bin/node" : 'node'
+    args 'scripts/generate_expectations.js'
 }
 
 tasks {
