@@ -44,7 +44,7 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
@@ -52,7 +52,7 @@ import static team.unnamed.mocha.util.ClassFileUtil.classDescOf;
 
 @ApiStatus.Internal
 public final class MolangCompiler {
-    private static final Random RANDOM = new Random();
+    private static final AtomicLong CLASS_NAME_COUNTER = new AtomicLong();
 
     private final Object entity;
     private final Scope scope;
@@ -129,7 +129,7 @@ public final class MolangCompiler {
 
         final ClassDesc interfaceDesc = classDescOf(clazz);
         final String scriptClassName = getClass().getPackage().getName() + ".MolangFunctionImpl_" + clazz.getSimpleName() + "_" + implementedMethod.getName()
-                + "_" + Long.toHexString(System.currentTimeMillis()) + "_" + Integer.toHexString(RANDOM.nextInt(2024));
+                + "_" + Long.toHexString(CLASS_NAME_COUNTER.incrementAndGet());
 
         final ClassDesc scriptClassDesc = ClassDesc.of(scriptClassName);
         final ClassDesc returnDesc = classDescOf(implementedMethod.getReturnType());
