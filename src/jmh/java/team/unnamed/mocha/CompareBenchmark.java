@@ -75,7 +75,7 @@ public class CompareBenchmark {
 
         final String expr = "temp.t = 3; return 3*temp.t*temp.t - 2*temp.t*temp.t*temp.t;";
 
-        function = mocha.compile(expr);
+        function = mocha.compiler().compile(expr);
         mlExpression = MolangCompiler.create(MolangCompiler.DEFAULT_FLAGS, getClass().getClassLoader()).compile(expr);
         mlExpressions = MoLang.newParser("temp.t = 3; return 3*temp.t*temp.t - 2*temp.t*temp.t*temp.t;").parse();
     }
