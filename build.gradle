@@ -73,8 +73,8 @@ subprojects {
         }
         publications {
             maven(MavenPublication) {
-                groupId = "com.zigythebird"
-                artifactId = "mochafloats-${project.name}"
+                groupId = "com.zigythebird.mochafloats"
+                artifactId = project.name
                 version = project.version
                 from components.java
             }
