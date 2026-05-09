@@ -23,6 +23,7 @@
  */
 package team.unnamed.mocha.runtime;
 
+import com.google.j2objc.annotations.ReflectionSupport;
 import org.jetbrains.annotations.NotNull;
 import team.unnamed.mocha.runtime.compiled.MochaCompiledFunction;
 
@@ -32,6 +33,7 @@ import team.unnamed.mocha.runtime.compiled.MochaCompiledFunction;
  * @since 3.0.0
  */
 @FunctionalInterface
+@ReflectionSupport(ReflectionSupport.Level.FULL)
 public interface MochaFunction extends MochaCompiledFunction {
     static @NotNull MochaFunction nop() {
         return NopMochaFunctionHolder.NOP;

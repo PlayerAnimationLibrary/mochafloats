@@ -30,4 +30,7 @@
  *
  * @since 3.0.0
  */
+@ReflectionSupport(ReflectionSupport.Level.NATIVE_ONLY)
 package team.unnamed.mocha.parser;
+
+import com.google.j2objc.annotations.ReflectionSupport;

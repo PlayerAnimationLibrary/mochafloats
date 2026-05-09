@@ -26,6 +26,7 @@ subprojects {
 
     dependencies {
         compileOnlyApi("org.jetbrains:annotations:26.1.0")
+        compileOnlyApi("com.google.j2objc:j2objc-annotations:3.1")
 
         testImplementation("org.junit.jupiter:junit-jupiter-api:6.0.3")
         testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:6.0.3")
@@ -97,48 +98,5 @@ tasks {
     compileJmhJava {
         sourceCompatibility = "24"
         targetCompatibility = "24"
-    }
-    compileJava {
-        sourceCompatibility = "24"
-        targetCompatibility = "24"
-    }
-    javadoc {
-        failOnError = false
-    }
-}
-
-license {
-    header.set(rootProject.resources.text.fromFile("header.txt"))
-    include("**/*.java")
-    newLine = false
-}
-
-java {
-    withJavadocJar()
-    withSourcesJar()
-}
-
-jar {
-    manifest.attributes("FMLModType": "GAMELIBRARY")
-}
-
-publishing {
-    repositories {
-        maven {
-            name = "RedlanceMinecraft"
-            url = "https://repo.redlance.org/public"
-            credentials {
-                username = "dima_dencep"
-                password = System.getenv("MAVEN_PASSWORD")
-            }
-        }
-    }
-    publications {
-        maven(MavenPublication) {
-            groupId = "com.zigythebird"
-            artifactId = "mochafloats"
-            version = project.version
-            from components.java
-        }
     }
 }
