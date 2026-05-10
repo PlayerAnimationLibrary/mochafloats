@@ -23,6 +23,7 @@
  */
 package team.unnamed.mocha.runtime;
 
+import com.google.j2objc.annotations.J2ObjCIncompatible;
 import org.jetbrains.annotations.NotNull;
 import team.unnamed.mocha.util.CaseInsensitiveStringHashMap;
 
@@ -33,6 +34,7 @@ import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
 
+@J2ObjCIncompatible
 final class FunctionCompileState {
     private final MolangCompiler compiler;
 

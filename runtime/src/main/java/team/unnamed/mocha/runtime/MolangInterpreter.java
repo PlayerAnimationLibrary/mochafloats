@@ -23,6 +23,8 @@
  */
 package team.unnamed.mocha.runtime;
 
+import com.google.j2objc.annotations.AutoreleasePool;
+import com.google.j2objc.annotations.LoopTranslation;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -143,6 +145,7 @@ public final class MolangInterpreter<T> {
      * @return The result of the evaluation.
      * @since 4.1.0
      */
+    @AutoreleasePool
     public float eval(final @NotNull List<Expression> expressions, final @Nullable Consumer<Scope> scopeConsumer) {
         if (expressions.size() == 1 && expressions.get(0) instanceof FloatExpression expression) {
             return expression.value();
@@ -161,7 +164,7 @@ public final class MolangInterpreter<T> {
         evaluator.warnOnReflectiveFunctionUsage(warnOnReflectiveFunctionUsage);
         Value lastResult = NumberValue.zero();
 
-        for (final Expression expression : expressions) {
+        for (@LoopTranslation(LoopTranslation.LoopStyle.FAST_ENUMERATION) final Expression expression : expressions) {
             lastResult = expression.visit(evaluator);
             final Value returnValue = evaluator.popReturnValue();
             if (returnValue != null) {

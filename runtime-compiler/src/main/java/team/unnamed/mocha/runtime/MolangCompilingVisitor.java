@@ -23,6 +23,7 @@
  */
 package team.unnamed.mocha.runtime;
 
+import com.google.j2objc.annotations.J2ObjCIncompatible;
 import org.jetbrains.annotations.NotNull;
 import team.unnamed.mocha.parser.ast.*;
 import team.unnamed.mocha.runtime.binding.Entity;
@@ -52,6 +53,7 @@ import java.util.Map;
 import static java.lang.constant.ConstantDescs.*;
 import static team.unnamed.mocha.util.ClassFileUtil.*;
 
+@J2ObjCIncompatible
 final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResult> {
 
     private final CodeBuilder codeBuilder;

@@ -23,6 +23,7 @@
  */
 package team.unnamed.mocha.runtime;
 
+import com.google.j2objc.annotations.LoopTranslation;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -277,7 +278,7 @@ public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>,
 
                 if (expr instanceof Function) {
                     final Function callable = (Function) expr;
-                    for (final Value val : arrayIterable) {
+                    for (@LoopTranslation(LoopTranslation.LoopStyle.FAST_ENUMERATION) final Value val : arrayIterable) {
                         // set 'val' as current value
                         // eval (objectExpr.propertyName = val)
                         final Value evaluatedObjectValue = this.eval(objectExpr);
@@ -317,7 +318,7 @@ public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>,
     public @NotNull Value visitExecutionScope(final @NotNull ExecutionScopeExpression executionScope) {
         List<Expression> expressions = executionScope.expressions();
         return (Function<T>) (context, arguments) -> {
-            for (Expression expression : expressions) {
+            for (@LoopTranslation(LoopTranslation.LoopStyle.FAST_ENUMERATION) Expression expression : expressions) {
                 // eval expression, ignore result
                 context.eval(expression);
 

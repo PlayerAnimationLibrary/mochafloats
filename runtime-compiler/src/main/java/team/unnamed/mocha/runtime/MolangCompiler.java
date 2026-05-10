@@ -23,6 +23,7 @@
  */
 package team.unnamed.mocha.runtime;
 
+import com.google.j2objc.annotations.J2ObjCIncompatible;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -57,6 +58,7 @@ import java.util.function.Consumer;
 import static java.util.Objects.requireNonNull;
 import static team.unnamed.mocha.util.ClassFileUtil.classDescOf;
 
+@J2ObjCIncompatible
 public final class MolangCompiler {
     private static final AtomicLong CLASS_NAME_COUNTER = new AtomicLong();
 

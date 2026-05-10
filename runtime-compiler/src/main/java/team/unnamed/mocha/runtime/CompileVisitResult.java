@@ -23,11 +23,13 @@
  */
 package team.unnamed.mocha.runtime;
 
+import com.google.j2objc.annotations.J2ObjCIncompatible;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
 
+@J2ObjCIncompatible
 final class CompileVisitResult {
     static final CompileVisitResult FLOAT = new CompileVisitResult(ConstantDescs.CD_float);
     static final CompileVisitResult DOUBLE = new CompileVisitResult(ConstantDescs.CD_double);

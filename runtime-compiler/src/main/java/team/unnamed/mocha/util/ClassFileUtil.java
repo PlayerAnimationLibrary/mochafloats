@@ -23,6 +23,7 @@
  */
 package team.unnamed.mocha.util;
 
+import com.google.j2objc.annotations.J2ObjCIncompatible;
 import org.jetbrains.annotations.NotNull;
 import team.unnamed.mocha.runtime.TypeCastException;
 
@@ -37,6 +38,7 @@ import java.util.Set;
 import static java.lang.constant.ConstantDescs.*;
 import static java.util.Objects.requireNonNull;
 
+@J2ObjCIncompatible
 public class ClassFileUtil {
 
     // Shared wrapper ClassDesc constants to avoid repeated ClassDesc.of() allocations
