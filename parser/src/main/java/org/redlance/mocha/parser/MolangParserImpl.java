@@ -29,7 +29,6 @@ import org.redlance.mocha.lexer.MolangLexer;
 import org.redlance.mocha.lexer.Token;
 import org.redlance.mocha.lexer.TokenKind;
 import org.redlance.mocha.parser.ast.*;
-import team.unnamed.mocha.parser.ast.*;
 
 import java.io.IOException;
 import java.util.ArrayList;

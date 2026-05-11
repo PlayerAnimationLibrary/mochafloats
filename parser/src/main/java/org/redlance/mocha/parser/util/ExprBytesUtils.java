@@ -26,7 +26,6 @@ package org.redlance.mocha.parser.util;
 import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.NotNull;
 import org.redlance.mocha.parser.ast.*;
-import team.unnamed.mocha.parser.ast.*;
 import org.redlance.mocha.parser.util.network.ProtocolUtils;
 
 import java.util.HashMap;
