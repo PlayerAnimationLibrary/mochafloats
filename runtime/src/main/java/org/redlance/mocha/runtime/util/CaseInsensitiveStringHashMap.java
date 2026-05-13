@@ -73,6 +73,7 @@ public class CaseInsensitiveStringHashMap<V> extends HashMap<String, V> {
     }
 
     private static <V> Map<? extends String, ? extends V> lowercaseMap(Map<? extends String, ? extends V> m) {
+        if (m instanceof CaseInsensitiveStringHashMap) return m;
         final Map<String, V> lowercased = new HashMap<>();
         for (Entry<? extends String, ? extends V> entry : m.entrySet()) {
             lowercased.put(lowercase(entry.getKey()), entry.getValue());
@@ -97,6 +98,7 @@ public class CaseInsensitiveStringHashMap<V> extends HashMap<String, V> {
 
     @Override
     public void putAll(Map<? extends String, ? extends V> m) {
+        if (m == this) return;
         super.putAll(lowercaseMap(m));
     }
 
