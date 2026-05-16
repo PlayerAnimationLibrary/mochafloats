@@ -74,9 +74,42 @@ subprojects {
         }
         publications {
             maven(MavenPublication) {
-                groupId = "com.zigythebird.mochafloats"
+                groupId = "org.redlance.mochafloats"
                 artifactId = project.name
                 version = project.version
+
+                pom {
+                    name = "MochaFloats ${project.name}"
+                    description = "A lightweight, fast and efficient Molang lexer, parser, interpreter and compiler"
+                    url = "https://github.com/PlayerAnimationLibrary/mochafloats"
+
+                    developers {
+                        developer {
+                            id = "dima_dencep"
+                            name = "dima_dencep"
+                            email = "dima_dencep@redlance.org"
+                        }
+                        developer {
+                            id = "zigythebird"
+                            name = "ZigyTheBird"
+                            email = "imanyarandi222@gmail.com"
+                        }
+                    }
+
+                    licenses {
+                        license {
+                            name = "MIT"
+                            url = "https://github.com/PlayerAnimationLibrary/mochafloats/blob/HEAD/license.txt"
+                        }
+                    }
+
+                    scm {
+                        connection = "scm:git:github.com/PlayerAnimationLibrary/mochafloats.git"
+                        developerConnection = "scm:git:github.com/PlayerAnimationLibrary/mochafloats.git"
+                        url = "https://github.com/PlayerAnimationLibrary/mochafloats.git"
+                    }
+                }
+
                 from components.java
             }
         }
