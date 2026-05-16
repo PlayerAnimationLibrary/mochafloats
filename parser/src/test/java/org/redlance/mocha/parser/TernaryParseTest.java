@@ -25,7 +25,6 @@ package org.redlance.mocha.parser;
 
 import org.junit.jupiter.api.Test;
 import org.redlance.mocha.parser.ast.*;
-import team.unnamed.mocha.parser.ast.*;
 
 import java.util.Collections;
 

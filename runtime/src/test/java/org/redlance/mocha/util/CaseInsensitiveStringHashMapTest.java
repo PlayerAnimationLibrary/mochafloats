@@ -24,6 +24,7 @@
 package org.redlance.mocha.util;
 
 import org.junit.jupiter.api.Test;
+import org.redlance.mocha.runtime.util.CaseInsensitiveStringHashMap;
 
 import java.util.Arrays;
 import java.util.HashSet;
