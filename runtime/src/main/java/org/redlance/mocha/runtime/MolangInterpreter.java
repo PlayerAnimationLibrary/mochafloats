@@ -24,7 +24,6 @@
 package org.redlance.mocha.runtime;
 
 import com.google.j2objc.annotations.AutoreleasePool;
-import com.google.j2objc.annotations.LoopTranslation;
 import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -164,7 +163,7 @@ public final class MolangInterpreter<T> {
         evaluator.warnOnReflectiveFunctionUsage(warnOnReflectiveFunctionUsage);
         Value lastResult = NumberValue.zero();
 
-        for (@LoopTranslation(LoopTranslation.LoopStyle.FAST_ENUMERATION) final Expression expression : expressions) {
+        for (final Expression expression : expressions) {
             lastResult = expression.visit(evaluator);
             final Value returnValue = evaluator.popReturnValue();
             if (returnValue != null) {
