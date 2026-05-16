@@ -23,6 +23,7 @@
  */
 package org.redlance.mocha.runtime;
 
+import com.google.j2objc.annotations.AutoreleasePool;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.redlance.mocha.parser.ast.*;
@@ -48,10 +49,12 @@ public final class IsConstantExpression implements ExpressionVisitor<@NotNull Bo
         this.scope = scope;
     }
 
+    @AutoreleasePool
     public static boolean test(final @NotNull Expression expression) {
         return expression.visit(INSTANCE);
     }
 
+    @AutoreleasePool
     public static boolean test(final @NotNull Expression expression, final @NotNull Scope scope) {
         return expression.visit(new IsConstantExpression(scope));
     }
