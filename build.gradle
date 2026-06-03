@@ -1,5 +1,5 @@
 plugins {
-    id "org.jetbrains.kotlin.jvm" version "2.3.21"
+    id "org.jetbrains.kotlin.jvm" version "2.4.0"
     id "java-library"
     id "maven-publish"
     id("net.neoforged.licenser") version "0.7.5"
@@ -22,7 +22,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:6.1.0")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:6.1.0")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.0")
-    testImplementation("org.jetbrains.kotlin:kotlin-stdlib:2.3.21")
+    testImplementation("org.jetbrains.kotlin:kotlin-stdlib:2.4.0")
 
     // performance comparison with other libraries
     jmhImplementation("com.bedrockk:molang:1.0-SNAPSHOT")
