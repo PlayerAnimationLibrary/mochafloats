@@ -13,7 +13,7 @@ const parser = new (require('./lib/molang'))();
 
 // create read/write streams to generate
 // results
-const basePath = 'src/test/resources';
+const basePath = 'runtime-compiler/src/test/resources';
 const input = fs.createReadStream(`${basePath}/tests.txt`);
 const output = fs.createWriteStream(`${basePath}/expectations.txt`);
 

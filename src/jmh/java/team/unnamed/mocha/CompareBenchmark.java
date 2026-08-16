@@ -42,7 +42,8 @@ import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
-import team.unnamed.mocha.runtime.MochaFunction;
+import org.redlance.mocha.runtime.MochaEngine;
+import org.redlance.mocha.runtime.MochaFunction;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -75,7 +76,7 @@ public class CompareBenchmark {
 
         final String expr = "temp.t = 3; return 3*temp.t*temp.t - 2*temp.t*temp.t*temp.t;";
 
-        function = mocha.compile(expr);
+        function = mocha.compiler().compile(expr);
         mlExpression = MolangCompiler.create(MolangCompiler.DEFAULT_FLAGS, getClass().getClassLoader()).compile(expr);
         mlExpressions = MoLang.newParser("temp.t = 3; return 3*temp.t*temp.t - 2*temp.t*temp.t*temp.t;").parse();
     }
