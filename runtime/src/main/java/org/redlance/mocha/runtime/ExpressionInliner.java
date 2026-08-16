@@ -33,11 +33,11 @@ import org.redlance.mocha.parser.ast.TernaryConditionalExpression;
 
 import static java.util.Objects.requireNonNull;
 
-final class ExpressionInliner implements ExpressionVisitor<@NotNull Expression> {
+public final class ExpressionInliner implements ExpressionVisitor<@NotNull Expression> {
     private final ExpressionInterpreter<?> interpreter;
     private final Scope scope;
 
-    ExpressionInliner(final @NotNull ExpressionInterpreter<?> interpreter, final @NotNull Scope scope) {
+    public ExpressionInliner(final @NotNull ExpressionInterpreter<?> interpreter, final @NotNull Scope scope) {
         this.interpreter = requireNonNull(interpreter, "interpreter");
         this.scope = requireNonNull(scope, "scope");
     }

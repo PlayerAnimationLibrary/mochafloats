@@ -64,12 +64,30 @@ public final class MolangCompiler {
 
     private final Object entity;
     private final Scope scope;
+    private final @Nullable ExpressionInliner inliner;
     private Consumer<byte @NotNull []> postCompile;
     private Consumer<@NotNull ParseException> parseExceptionHandler;
 
     public MolangCompiler(final @Nullable Object entity, final @NotNull Scope scope) {
+        this(entity, scope, defaultInliner(scope));
+    }
+
+    /**
+     * Creates a compiler with the given {@code inliner}, called once per
+     * expression before code generation. Passing {@code null} disables the
+     * constant-folding inline pass entirely, so expressions are compiled
+     * as-is.
+     *
+     * @since 4.0.5
+     */
+    public MolangCompiler(final @Nullable Object entity, final @NotNull Scope scope, final @Nullable ExpressionInliner inliner) {
         this.entity = entity;
         this.scope = requireNonNull(scope, "scope");
+        this.inliner = inliner;
+    }
+
+    private static @NotNull ExpressionInliner defaultInliner(final @NotNull Scope scope) {
+        return new ExpressionInliner(new ExpressionInterpreter<>(null, scope), scope);
     }
 
     public @Nullable Object entity() {
@@ -216,10 +234,9 @@ public final class MolangCompiler {
                     final MolangCompilingVisitor compiler = new MolangCompilingVisitor(compileState);
                     CompileVisitResult lastVisitResult = null;
 
-                    final ExpressionInliner inliner = new ExpressionInliner(new ExpressionInterpreter<>(null, scope), scope);
-
                     for (final Expression expression : expressions) {
-                        lastVisitResult = expression.visit(inliner).visit(compiler);
+                        final Expression toCompile = inliner != null ? expression.visit(inliner) : expression;
+                        lastVisitResult = toCompile.visit(compiler);
                     }
 
                     if (lastVisitResult == null || !lastVisitResult.returned()) {
