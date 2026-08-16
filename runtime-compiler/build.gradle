@@ -5,7 +5,7 @@ plugins {
 dependencies {
     api project(":runtime")
 
-    testImplementation("org.jetbrains.kotlin:kotlin-stdlib:2.3.21")
+    testImplementation("org.jetbrains.kotlin:kotlin-stdlib:2.4.10")
 }
 
 tasks.register('generateExpectations', Exec) {
