@@ -590,6 +590,10 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
                 it.next().visit(this);
             }
 
+            // restore the expected type, otherwise the last parameter type
+            // leaks into the rest of the expression (e.g. "q.f('a') - 1")
+            this.expectedType = targetType;
+
             final ClassDesc declaringClassDesc = classDescOf(nativeMethod.getDeclaringClass());
             final ClassDesc returnTypeDesc = classDescOf(nativeMethod.getReturnType());
             final MethodTypeDesc methodTypeDesc = MethodTypeDesc.of(returnTypeDesc, ctParameters);
