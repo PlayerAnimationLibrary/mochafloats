@@ -381,18 +381,17 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
                 } else if (result.is(CD_int)) {
                     codeBuilder.ineg();
                 } else if (result.is(CD_boolean)) {
-                    // logical negation
-                    codeBuilder.iconst_1();
-                    codeBuilder.ixor();
+                    // -x is non-zero only if x is non-zero,
+                    // so the boolean value stays the same
                 } else {
                     throw new IllegalStateException("Unsupported type for negation: " + result);
                 }
-                break;
+                // the negated value keeps its type
+                return result;
             }
             default:
                 throw new UnsupportedOperationException("Unsupported unary operator: " + expression.op());
         }
-        return null;
     }
 
     @Override
@@ -589,6 +588,10 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
                 this.expectedType = paramType;
                 it.next().visit(this);
             }
+
+            // restore the expected type, otherwise the last parameter type
+            // leaks into the rest of the expression (e.g. "q.f('a') - 1")
+            this.expectedType = targetType;
 
             final ClassDesc declaringClassDesc = classDescOf(nativeMethod.getDeclaringClass());
             final ClassDesc returnTypeDesc = classDescOf(nativeMethod.getReturnType());
