@@ -135,16 +135,17 @@ final class MolangParserImpl implements MolangParser {
                 return expr;
             case SUB:
                 lexer.next();
-                final Expression operatedExpression = parseSingle(lexer);
+                final Expression operatedExpression = parseUnaryOperand(lexer);
                 if (operatedExpression instanceof FloatExpression) {
                     // NEGATE(A) is just parsed as (-A)
                     return FloatExpression.of(-((FloatExpression) operatedExpression).value());
                 } else if (operatedExpression != null) {
                     return new UnaryExpression(UnaryExpression.Op.ARITHMETICAL_NEGATION, operatedExpression);
                 }
+                return null;
             case BANG:
                 lexer.next();
-                Expression unaryExpr = parseSingle(lexer);
+                Expression unaryExpr = parseUnaryOperand(lexer);
                 if (unaryExpr == null) return null;
                 return new UnaryExpression(UnaryExpression.Op.LOGICAL_NEGATION, unaryExpr);
             case RETURN:
@@ -155,6 +156,23 @@ final class MolangParserImpl implements MolangParser {
         }
 
         return null;
+    }
+
+    //
+    // Parses the operand of an unary operator: a single expression
+    // followed by its calls and array accesses, so that "-math.abs(x)"
+    // is parsed as "-(math.abs(x))" and not as "(-math.abs)(x)"
+    //
+    private static @Nullable Expression parseUnaryOperand(final @NotNull MolangLexer lexer) throws IOException {
+        Expression expr = parseSingle(lexer);
+        while (expr != null) {
+            final TokenKind kind = lexer.current().kind();
+            if (kind != TokenKind.LPAREN && kind != TokenKind.LBRACKET) {
+                break;
+            }
+            expr = parseCompound(lexer, expr, 0);
+        }
+        return expr;
     }
 
     static @Nullable Expression parseCompoundExpression(
