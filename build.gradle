@@ -1,93 +1,136 @@
 plugins {
-    id "org.jetbrains.kotlin.jvm" version "2.4.10"
+    id "org.jetbrains.kotlin.jvm" version "2.4.10" apply false
     id "java-library"
     id "maven-publish"
-    id("net.neoforged.licenser") version "0.7.5"
+    id("net.neoforged.licenser") version "0.7.5" apply false
     id("me.champeau.jmh") version "0.7.3"
 }
 
-repositories {
-    mavenCentral()
-    maven {
-        url = uri("https://repo.redlance.org/public") // mirroring https://maven.pkg.github.com/bedrockk/MoLang
+allprojects {
+    apply plugin: "net.neoforged.licenser"
+
+    group = rootProject.group
+    version = rootProject.version
+
+    repositories {
+        mavenCentral()
+        maven {
+            url = uri("https://repo.redlance.org/public") // mirroring https://maven.pkg.github.com/bedrockk/MoLang
+        }
+        maven { url = "https://maven.blamejared.com/" } // moonflower's molang-compiler
     }
-    maven { url = "https://maven.blamejared.com/"} // moonflower's molang-compiler
+
+    license {
+        header.set(rootProject.resources.text.fromFile("header.txt"))
+        include("**/*.java")
+        newLine = false
+    }
+}
+
+subprojects {
+    apply plugin: "java-library"
+    apply plugin: "maven-publish"
+
+    dependencies {
+        compileOnlyApi("org.jetbrains:annotations:26.1.0")
+        compileOnlyApi("com.google.j2objc:j2objc-annotations:3.1")
+
+        testImplementation("org.junit.jupiter:junit-jupiter-api:6.1.3")
+        testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:6.1.3")
+        testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.3")
+    }
+
+    tasks.named("test") {
+        useJUnitPlatform()
+    }
+
+    tasks.named("compileJava") {
+        sourceCompatibility = "24"
+        targetCompatibility = "24"
+    }
+
+    tasks.named("javadoc") {
+        failOnError = false
+    }
+
+    java {
+        withJavadocJar()
+        withSourcesJar()
+    }
+
+    jar {
+        manifest.attributes("FMLModType": "GAMELIBRARY")
+    }
+
+    publishing {
+        repositories {
+            maven {
+                name = "RedlanceMinecraft"
+                url = "https://repo.redlance.org/public"
+                credentials {
+                    username = "dima_dencep"
+                    password = System.getenv("MAVEN_PASSWORD")
+                }
+            }
+        }
+        publications {
+            maven(MavenPublication) {
+                groupId = "org.redlance.mochafloats"
+                artifactId = project.name
+                version = project.version
+
+                pom {
+                    name = "MochaFloats ${project.name}"
+                    description = "A lightweight, fast and efficient Molang lexer, parser, interpreter and compiler"
+                    url = "https://github.com/PlayerAnimationLibrary/mochafloats"
+
+                    developers {
+                        developer {
+                            id = "dima_dencep"
+                            name = "dima_dencep"
+                            email = "dima_dencep@redlance.org"
+                        }
+                        developer {
+                            id = "zigythebird"
+                            name = "ZigyTheBird"
+                            email = "imanyarandi222@gmail.com"
+                        }
+                    }
+
+                    licenses {
+                        license {
+                            name = "MIT"
+                            url = "https://github.com/PlayerAnimationLibrary/mochafloats/blob/HEAD/license.txt"
+                        }
+                    }
+
+                    scm {
+                        connection = "scm:git:github.com/PlayerAnimationLibrary/mochafloats.git"
+                        developerConnection = "scm:git:github.com/PlayerAnimationLibrary/mochafloats.git"
+                        url = "https://github.com/PlayerAnimationLibrary/mochafloats.git"
+                    }
+                }
+
+                from components.java
+            }
+        }
+    }
 }
 
 dependencies {
-    implementation api("io.netty:netty-buffer:4.2.17.Final")
-    compileOnlyApi("org.jetbrains:annotations:26.1.0")
-
-    // tests
-    testImplementation("org.junit.jupiter:junit-jupiter-api:6.1.3")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:6.1.3")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher:6.1.3")
-    testImplementation("org.jetbrains.kotlin:kotlin-stdlib:2.4.10")
+    api project(":lexer")
+    api project(":parser")
+    api project(":runtime")
+    api project(":runtime-compiler")
 
     // performance comparison with other libraries
     jmhImplementation("com.bedrockk:molang:1.0-SNAPSHOT")
     jmhImplementation("gg.moonflower:molang-compiler:3.1.1.19")
 }
 
-tasks.register('generateExpectations', Exec) {
-    def nvmDir = file("${System.getenv('HOME')}/.nvm/versions/node")
-    executable nvmDir.isDirectory() ? "${nvmDir.listFiles().sort().last()}/bin/node" : 'node'
-    args 'scripts/generate_expectations.js'
-}
-
 tasks {
-    test {
-        useJUnitPlatform()
-        dependsOn tasks.generateExpectations
-    }
     compileJmhJava {
         sourceCompatibility = "24"
         targetCompatibility = "24"
-    }
-    compileJava {
-        sourceCompatibility = "24"
-        targetCompatibility = "24"
-    }
-    javadoc {
-        failOnError = false
-    }
-    compileKotlin {
-        enabled = false
-    }
-}
-
-license {
-    header.set(rootProject.resources.text.fromFile("header.txt"))
-    include("**/*.java")
-    newLine = false
-}
-
-java {
-    withJavadocJar()
-    withSourcesJar()
-}
-
-jar {
-    manifest.attributes("FMLModType": "GAMELIBRARY")
-}
-
-publishing {
-    repositories {
-        maven {
-            name = "RedlanceMinecraft"
-            url = "https://repo.redlance.org/public"
-            credentials {
-                username = "dima_dencep"
-                password = System.getenv("MAVEN_PASSWORD")
-            }
-        }
-    }
-    publications {
-        maven(MavenPublication) {
-            groupId = "com.zigythebird"
-            artifactId = "mochafloats"
-            version = project.version
-            from components.java
-        }
     }
 }

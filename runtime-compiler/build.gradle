@@ -1,0 +1,24 @@
+plugins {
+    id "org.jetbrains.kotlin.jvm"
+}
+
+dependencies {
+    api project(":runtime")
+
+    testImplementation("org.jetbrains.kotlin:kotlin-stdlib:2.4.10")
+}
+
+tasks.register('generateExpectations', Exec) {
+    workingDir = rootProject.projectDir
+    def nvmDir = file("${System.getenv('HOME')}/.nvm/versions/node")
+    executable nvmDir.isDirectory() ? "${nvmDir.listFiles().sort().last()}/bin/node" : 'node'
+    args 'scripts/generate_expectations.js'
+}
+
+tasks.named("compileTestKotlin") {
+    enabled = true
+}
+
+tasks.named("test") {
+    dependsOn tasks.named("generateExpectations")
+}

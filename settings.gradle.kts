@@ -6,3 +6,10 @@ pluginManagement {
 }
 
 rootProject.name = "mocha"
+
+include(
+    "lexer",
+    "parser",
+    "runtime",
+    "runtime-compiler",
+)
