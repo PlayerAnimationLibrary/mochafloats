@@ -47,13 +47,21 @@ import java.util.List;
 import static java.util.Objects.requireNonNull;
 
 final class ReflectiveFunction<T> implements Function<T> {
+    private final Object object;
     private final Method method;
     private final MethodHandle mh;
 
     ReflectiveFunction(final @Nullable Object object, final @NotNull Method method) {
+        this.object = object;
         this.method = requireNonNull(method, "method");
+        // j2objc emulates java.lang.invoke with stubs that return null, so there evaluate() invokes the method reflectively.
+        final MethodHandles.Lookup lookup = MethodHandles.lookup();
+        if (lookup == null) {
+            this.mh = null;
+            return;
+        }
         try {
-            MethodHandle handle = MethodHandles.lookup().unreflect(method);
+            MethodHandle handle = lookup.unreflect(method);
             if (object != null) handle = handle.bindTo(object);
             this.mh = handle;
         } catch (IllegalAccessException e) {
@@ -159,7 +167,7 @@ final class ReflectiveFunction<T> implements Function<T> {
         }
 
         try {
-            return of(mh.invokeWithArguments(values));
+            return of(mh != null ? mh.invokeWithArguments(values) : method.invoke(object, values));
         } catch (final Throwable throwable) {
             throw new RuntimeException(throwable);
         }
