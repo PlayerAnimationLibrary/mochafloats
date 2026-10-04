@@ -89,6 +89,11 @@ final class MolangParserImpl implements MolangParser {
                 lexer.next();
                 List<Expression> expressions = new ArrayList<>();
                 while (true) {
+                    // "{}" and a semicolon after the last statement, as in "{ v.a = 1; }"
+                    if (lexer.current().kind() == TokenKind.RBRACE) {
+                        lexer.next();
+                        break;
+                    }
                     Expression compoundExpression = MolangParserImpl.parseCompoundExpression(lexer, 0);
                     if (compoundExpression != null) expressions.add(compoundExpression);
                     token = lexer.current();
@@ -155,7 +160,12 @@ final class MolangParserImpl implements MolangParser {
                 return new UnaryExpression(UnaryExpression.Op.RETURN, compoundExpression);
         }
 
-        return null;
+        // an empty statement (";;"), a missing operand ("1 +") or argument ("f(1,)"):
+        // returning null here made the caller stop parsing and drop the rest of the script
+        if (token.kind() == TokenKind.ERROR) {
+            throw new ParseException("Found error token: " + token.value(), lexer.cursor());
+        }
+        throw new ParseException("Expected an expression, but found " + token.kind(), lexer.cursor());
     }
 
     //
@@ -277,7 +287,9 @@ final class MolangParserImpl implements MolangParser {
                     // then it's a ternary expression, since there is a ':', indicating the next expression
                     lexer.next();
                     if (trueValue == null) return null;
-                    Expression compoundExpression = MolangParserImpl.parseCompoundExpression(lexer, ternaryPrecedence);
+                    // the false branch may hold another conditional, so "a ? 1 : b ? 2 : 3"
+                    // is "a ? 1 : (b ? 2 : 3)", like in MolangJS and most other implementations
+                    Expression compoundExpression = MolangParserImpl.parseCompoundExpression(lexer, ternaryPrecedence - 1);
                     if (compoundExpression == null || left == null) return null;
                     return new TernaryConditionalExpression(left, trueValue, compoundExpression);
                 } else {
@@ -318,7 +330,10 @@ final class MolangParserImpl implements MolangParser {
         }
 
         lexer.next();
-        Expression compoundExpression = MolangParserImpl.parseCompoundExpression(lexer, precedence);
+        // assignment takes everything on its right, so "v.x = a ? 1 : 2" assigns the
+        // conditional and "v.a = v.b = 1" assigns both, the other operators group from the left
+        final int rightPrecedence = op == BinaryExpression.Op.ASSIGN ? precedence - 1 : precedence;
+        Expression compoundExpression = MolangParserImpl.parseCompoundExpression(lexer, rightPrecedence);
         if (compoundExpression == null || left == null) return null;
         return new BinaryExpression(op, left, compoundExpression);
     }

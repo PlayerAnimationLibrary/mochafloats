@@ -112,7 +112,7 @@ public final class ArrayAccessExpression implements Expression {
 
     @Override
     public @NotNull String toString() {
-        return String.format("%s[%s]", array, index);
+        return BinaryExpression.parenthesize(array, !CallExpression.isPostfixOperand(array)) + "[" + index + "]";
     }
 
     @Override

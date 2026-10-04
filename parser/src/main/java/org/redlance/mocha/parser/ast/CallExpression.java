@@ -98,7 +98,16 @@ public final class CallExpression implements Expression {
 
     @Override
     public String toString() {
-        return String.format("%s(%s)", function, ExpressionListUtils.toString(this.arguments, ","));
+        return BinaryExpression.parenthesize(function, !isPostfixOperand(function))
+                + "(" + ExpressionListUtils.toString(this.arguments, ",") + ")";
+    }
+
+    // whether the expression can be followed by "(...)" or "[...]" without parentheses
+    static boolean isPostfixOperand(final @NotNull Expression expression) {
+        return expression instanceof IdentifierExpression
+                || expression instanceof AccessExpression
+                || expression instanceof CallExpression
+                || expression instanceof ArrayAccessExpression;
     }
 
     @Override

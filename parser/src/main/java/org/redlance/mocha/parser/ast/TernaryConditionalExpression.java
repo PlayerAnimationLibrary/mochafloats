@@ -138,7 +138,23 @@ public final class TernaryConditionalExpression implements Expression {
 
     @Override
     public String toString() {
-        return String.format("(%s)?%s:%s", conditional, trueExpression, falseExpression);
+        // the condition must bind tighter than "?", and the true branch can't end
+        // with a "?" without ":" of its own, it would take this conditional's ":"
+        final boolean conditionParentheses = BinaryExpression.printPrecedence(conditional)
+                <= BinaryExpression.Op.CONDITIONAL.precedence();
+        return BinaryExpression.parenthesize(conditional, conditionParentheses) + "?"
+                + BinaryExpression.parenthesize(trueExpression, endsWithOpenConditional(trueExpression)) + ":"
+                + falseExpression;
+    }
+
+    private static boolean endsWithOpenConditional(final @NotNull Expression expression) {
+        if (expression instanceof BinaryExpression binary) {
+            return binary.op() == BinaryExpression.Op.CONDITIONAL
+                    || (!binary.rightNeedsParentheses() && endsWithOpenConditional(binary.right()));
+        } else if (expression instanceof TernaryConditionalExpression ternary) {
+            return endsWithOpenConditional(ternary.falseExpression());
+        }
+        return false;
     }
 
     @Override

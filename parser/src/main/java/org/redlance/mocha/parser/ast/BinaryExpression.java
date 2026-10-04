@@ -127,7 +127,37 @@ public final class BinaryExpression implements Expression {
 
     @Override
     public String toString() {
-        return String.format("%s%s%s", this.left, this.op.toString(), this.right);
+        return parenthesize(left, leftNeedsParentheses()) + op + parenthesize(right, rightNeedsParentheses());
+    }
+
+    // "=" and "?" take everything on their right, the other operators group from the left
+    private boolean rightAssociative() {
+        return op == Op.ASSIGN || op == Op.CONDITIONAL;
+    }
+
+    // parentheses are only printed where the parser would otherwise group differently
+    boolean leftNeedsParentheses() {
+        final int leftPrecedence = printPrecedence(left);
+        return leftPrecedence < op.precedence() || (rightAssociative() && leftPrecedence == op.precedence());
+    }
+
+    boolean rightNeedsParentheses() {
+        final int rightPrecedence = printPrecedence(right);
+        return rightPrecedence < op.precedence() || (!rightAssociative() && rightPrecedence == op.precedence());
+    }
+
+    // how tightly an expression binds when printed, everything but the operators binds tightest
+    static int printPrecedence(final @NotNull Expression expression) {
+        if (expression instanceof BinaryExpression binary) {
+            return binary.op.precedence();
+        } else if (expression instanceof TernaryConditionalExpression) {
+            return Op.CONDITIONAL.precedence();
+        }
+        return Integer.MAX_VALUE;
+    }
+
+    static @NotNull String parenthesize(final @NotNull Expression expression, final boolean parentheses) {
+        return parentheses ? "(" + expression + ")" : expression.toString();
     }
 
     @Override
