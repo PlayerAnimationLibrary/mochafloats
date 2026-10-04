@@ -245,6 +245,11 @@ public class ClassFileUtil {
             cb.d2l();
         } else if (to.equals(CD_float)) {
             cb.d2f();
+        } else if (to.equals(CD_boolean)) {
+            // compare instead of truncating, 0.5 is true
+            cb.dconst_0();
+            cb.dcmpl();
+            addCastIntTo(cb, CD_boolean);
         } else if (to.equals(CD_void)) {
             throw new IllegalArgumentException("Cannot cast double to void");
         } else {
@@ -271,6 +276,11 @@ public class ClassFileUtil {
             cb.l2d();
         } else if (to.equals(CD_float)) {
             cb.l2f();
+        } else if (to.equals(CD_boolean)) {
+            // compare instead of truncating to an int, 2^32 is true
+            cb.lconst_0();
+            cb.lcmp();
+            addCastIntTo(cb, CD_boolean);
         } else if (to.equals(CD_void)) {
             throw new IllegalArgumentException("Cannot cast long to void");
         } else {
@@ -297,6 +307,11 @@ public class ClassFileUtil {
             cb.f2d();
         } else if (to.equals(CD_long)) {
             cb.f2l();
+        } else if (to.equals(CD_boolean)) {
+            // compare instead of truncating, 0.5 is true
+            cb.fconst_0();
+            cb.fcmpl();
+            addCastIntTo(cb, CD_boolean);
         } else if (to.equals(CD_void)) {
             throw new IllegalArgumentException("Cannot cast float to void");
         } else {

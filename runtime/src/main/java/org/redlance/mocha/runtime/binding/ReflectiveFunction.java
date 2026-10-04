@@ -61,9 +61,11 @@ final class ReflectiveFunction<T> implements Function<T> {
             return;
         }
         try {
-            MethodHandle handle = lookup.unreflect(method);
+            MethodHandle handle = lookup.unreflect(method).asFixedArity();
             if (object != null) handle = handle.bindTo(object);
-            this.mh = handle;
+            // adapt once to (Object[])Object, invokeWithArguments would build this spreader on every call
+            this.mh = handle.asType(handle.type().generic())
+                    .asSpreader(Object[].class, handle.type().parameterCount());
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }
@@ -108,22 +110,28 @@ final class ReflectiveFunction<T> implements Function<T> {
             final Value value;
 
             if (i == parameters.length - 1 && method.isVarArgs()) {
-                // varargs
+                // varargs, collect the remaining arguments into an array of the component type
                 final Class<?> componentType = parameterType.getComponentType();
-                final List<Value> varArgsValues = new ArrayList<>();
+                final List<Object> varArgsValues = new ArrayList<>();
                 while (true) {
                     final Argument argument = arguments.next();
                     if (argument.expression() == null) {
                         break;
                     }
                     final Value object = argument.eval();
-                    if (componentType.isInstance(object)) {
+                    if (object == null) {
+                        varArgsValues.add(JavaTypes.getNullValueForType(componentType));
+                    } else if (componentType.isInstance(object)) {
                         varArgsValues.add(object);
                     } else {
-                        varArgsValues.add(null);
+                        varArgsValues.add(JavaTypes.convert(object, componentType));
                     }
                 }
-                value = ArrayValue.of(varArgsValues.toArray(size -> (Value[]) Array.newInstance(componentType, size)));
+                final Object array = Array.newInstance(componentType, varArgsValues.size());
+                for (int j = 0; j < varArgsValues.size(); j++) {
+                    Array.set(array, j, varArgsValues.get(j));
+                }
+                value = new JavaValue(array);
             } else if (parameterType == Lazy.class) {
                 // use the Lazy<T> argument as type, and pass the argument
                 final Type genericParameterType = genericParameterTypes[i];
@@ -132,8 +140,11 @@ final class ReflectiveFunction<T> implements Function<T> {
                             "Lazy<T> parameter must be a parameterized type."
                     );
                 }
-                parameterType = (Class<?>) ((ParameterizedType) genericParameterType)
-                        .getActualTypeArguments()[0];
+                final Type typeArgument = ((ParameterizedType) genericParameterType).getActualTypeArguments()[0];
+                // Lazy<ExecutionContext<?>> has a parameterized type argument
+                parameterType = (Class<?>) (typeArgument instanceof ParameterizedType parameterized
+                        ? parameterized.getRawType()
+                        : typeArgument);
                 if (parameterType == ExecutionContext.class) {
                     value = new JavaValue((Lazy<ExecutionContext<T>>) () -> context);
                 } else {
@@ -157,17 +168,21 @@ final class ReflectiveFunction<T> implements Function<T> {
                 value = argument.eval();
             }
 
+            final Class<?> declaredType = parameter.getType();
             if (value == null) {
-                values[i] = JavaTypes.getNullValueForType(parameterType);
-            } else if (parameter.isAnnotationPresent(Entity.class)) {
-                values[i] = ((JavaValue) value).value();
+                values[i] = JavaTypes.getNullValueForType(declaredType);
+            } else if (value instanceof JavaValue javaValue) {
+                // the execution context, the entity, a Lazy, the varargs array
+                // or a Java object, passed as is when the parameter accepts it
+                final Object object = javaValue.value();
+                values[i] = declaredType.isInstance(object) ? object : JavaTypes.getNullValueForType(declaredType);
             } else {
-                values[i] = JavaTypes.convert(value, parameterType);
+                values[i] = JavaTypes.convert(value, declaredType);
             }
         }
 
         try {
-            return of(mh != null ? mh.invokeWithArguments(values) : method.invoke(object, values));
+            return of(mh != null ? (Object) mh.invokeExact(values) : method.invoke(object, values));
         } catch (final Throwable throwable) {
             throw new RuntimeException(throwable);
         }

@@ -58,8 +58,8 @@ public class ProtocolUtils {
         int ordinal = buf.readUnsignedByte();
 
         T[] constants = enumClass.getEnumConstants();
-        if (ordinal < 0 || ordinal >= constants.length) {
-            return constants[0]; // TODO
+        if (ordinal >= constants.length) {
+            throw new IllegalArgumentException("Unknown " + enumClass.getSimpleName() + " ordinal: " + ordinal);
         }
         return constants[ordinal];
     }

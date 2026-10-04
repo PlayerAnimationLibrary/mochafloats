@@ -66,6 +66,16 @@ public final class JavaFunction<T> implements Function<T> {
         return method;
     }
 
+    /**
+     * Returns whether calls to this function are made through
+     * reflection, because no generic function was given for it.
+     *
+     * @return If this function is invoked reflectively.
+     */
+    public boolean reflective() {
+        return function instanceof ReflectiveFunction;
+    }
+
     @Override
     public @Nullable Value evaluate(final @NotNull ExecutionContext<T> context, final @NotNull Arguments arguments) {
         return function.evaluate(context, arguments);

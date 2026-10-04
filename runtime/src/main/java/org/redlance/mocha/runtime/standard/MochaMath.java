@@ -25,15 +25,23 @@ package org.redlance.mocha.runtime.standard;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.redlance.mocha.runtime.ExecutionContext;
 import org.redlance.mocha.runtime.binding.BindExternalFunction;
 import org.redlance.mocha.runtime.binding.Binding;
+import org.redlance.mocha.runtime.value.Function;
 import org.redlance.mocha.runtime.value.NumberValue;
 import org.redlance.mocha.runtime.value.ObjectProperty;
 import org.redlance.mocha.runtime.value.ObjectValue;
 import org.redlance.mocha.runtime.util.CaseInsensitiveStringHashMap;
+import org.redlance.mocha.runtime.value.Value;
 
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 /**
  * Math function bindings inside an object
@@ -43,7 +51,6 @@ import java.util.Random;
 @BindExternalFunction(at = Math.class, name = "abs", args = {float.class}, pure = true)
 @BindExternalFunction(at = Math.class, name = "max", args = {float.class, float.class}, pure = true)
 @BindExternalFunction(at = Math.class, name = "min", args = {float.class, float.class}, pure = true)
-@BindExternalFunction(at = Math.class, name = "round", args = {float.class}, pure = true)
 public final class MochaMath implements ObjectValue {
     @Binding("pi")
     public static final float PI = (float) Math.PI;
@@ -53,9 +60,21 @@ public final class MochaMath implements ObjectValue {
     private static final double RADIAN = Math.toRadians(1);
 
     private static final Random RANDOM = new Random();
-    private static final int DECIMAL_PART = 4;
+
+    // the functions below back the Java bindings of this class, and
+    // JavaObjectBinding.of requires a backing function to be exactly as pure as its binding
+    private static final Set<String> PURE_FUNCTIONS = pureFunctionNames();
+
+    // kept out of entries(): a backing value would stop JavaObjectBinding from inlining the fields
+    private static final Map<String, ObjectProperty> CONSTANTS = new CaseInsensitiveStringHashMap<>();
+
+    static {
+        CONSTANTS.put("pi", ObjectProperty.property(NumberValue.of(PI), true));
+        CONSTANTS.put("e", ObjectProperty.property(NumberValue.of(E), true));
+    }
 
     private final Map<String, ObjectProperty> entries = new CaseInsensitiveStringHashMap<>();
+    private boolean frozen;
 
     public MochaMath() {
         setFunction("abs", Math::abs);
@@ -80,12 +99,10 @@ public final class MochaMath implements ObjectValue {
         setFunction("min", Math::min);
         setFunction("min_angle", MochaMath::minAngle);
         setFunction("mod", MochaMath::mod);
-        entries.put("pi", ObjectProperty.property(NumberValue.of(Math.PI), true));
-        entries.put("e", ObjectProperty.property(NumberValue.of(Math.E), true));
         setFunction("pow", MochaMath::pow);
         setFunction("random", MochaMath::random);
         setFunction("random_integer", MochaMath::randomInteger);
-        setFunction("round", Math::round);
+        setFunction("round", MochaMath::round);
         setFunction("sign", MochaMath::sign);
         setFunction("sin", MochaMath::sin);
         setFunction("sqrt", MochaMath::sqrt);
@@ -94,7 +111,23 @@ public final class MochaMath implements ObjectValue {
         setFunction("r2d", MochaMath::r2d);
 
         // all of our properties are constant
-        entries.replaceAll((key, property) -> ObjectProperty.property(property.value(), true));
+        frozen = true;
+    }
+
+    private static @NotNull Set<String> pureFunctionNames() {
+        final Set<String> names = new HashSet<>();
+        for (final Method method : MochaMath.class.getDeclaredMethods()) {
+            final Binding binding = method.getDeclaredAnnotation(Binding.class);
+            if (binding != null && binding.pure()) {
+                names.addAll(Arrays.asList(binding.value()));
+            }
+        }
+        for (final BindExternalFunction function : MochaMath.class.getAnnotationsByType(BindExternalFunction.class)) {
+            if (function.pure()) {
+                names.add(function.as().isEmpty() ? function.name() : function.as());
+            }
+        }
+        return names;
     }
 
     @Binding(value = "ceil", pure = true)
@@ -167,20 +200,22 @@ public final class MochaMath implements ObjectValue {
         return (float) Math.cos(value * RADIAN);
     }
 
+    // the sum of "amount" random numbers between low and high
     @Binding("die_roll")
     public static float dieRoll(final float amount, final float low, final float high) {
         float result = 0;
         for (int i = 0; i < amount; i++) {
-            result += RANDOM.nextInt((int) high) + low;
+            result += random(low, high);
         }
-        return result / DECIMAL_PART;
+        return result;
     }
 
+    // the sum of "amount" random whole numbers from low to high, both included
     @Binding("die_roll_integer")
     public static float dieRollInteger(final float amount, final float low, final float high) {
         int result = 0;
         for (int i = 0; i < amount; i++) {
-            result += RANDOM.nextInt((int) low, (int) high);
+            result += randomInteger(low, high);
         }
         return result;
     }
@@ -237,14 +272,18 @@ public final class MochaMath implements ObjectValue {
         return a % b;
     }
 
+    // between the two bounds, in either order (Random.nextFloat(min, max) would throw unless min < max)
     @Binding("random")
     public static float random(final float min, final float max) {
-        return RANDOM.nextFloat(min, max);
+        return min + RANDOM.nextFloat() * (max - min);
     }
 
+    // from the smaller bound to the bigger one, both included
     @Binding("random_integer")
     public static int randomInteger(final float min, final float max) {
-        return RANDOM.nextInt((int) min, (int) max);
+        final int low = (int) Math.min(min, max);
+        final int high = (int) Math.max(min, max);
+        return (int) (low + RANDOM.nextLong((long) high - low + 1));
     }
 
     @Binding(value = "sign", pure = true)
@@ -257,6 +296,12 @@ public final class MochaMath implements ObjectValue {
     @Binding(value = "sin", pure = true)
     public static float sin(final float value) {
         return (float) Math.sin(value * RADIAN);
+    }
+
+    // halves round away from zero like in Bedrock, so -2.5 is -3 (Math.round would give -2)
+    @Binding(value = "round", pure = true)
+    public static float round(final float value) {
+        return (float) Math.copySign(Math.floor(Math.abs((double) value) + 0.5), value);
     }
 
     @Binding(value = "trunc", pure = true)
@@ -276,6 +321,43 @@ public final class MochaMath implements ObjectValue {
 
     @Override
     public @Nullable ObjectProperty getProperty(final @NotNull String name) {
-        return entries.get(name);
+        final ObjectProperty property = entries.get(name);
+        return property != null ? property : CONSTANTS.get(name);
+    }
+
+    @Override
+    public boolean set(final @NotNull String name, final @Nullable Value value) {
+        if (frozen || value == null) {
+            return false;
+        }
+        final Value function = value instanceof Function<?> && PURE_FUNCTIONS.contains(name)
+                ? new PureFunction((Function<?>) value)
+                : value;
+        entries.put(name, ObjectProperty.property(function, true));
+        return true;
+    }
+
+    @Override
+    public @NotNull Map<String, ObjectProperty> entries() {
+        return Collections.unmodifiableMap(entries);
+    }
+
+    private static final class PureFunction implements Function<Object> {
+        private final Function<Object> function;
+
+        @SuppressWarnings("unchecked")
+        PureFunction(final @NotNull Function<?> function) {
+            this.function = (Function<Object>) function;
+        }
+
+        @Override
+        public @Nullable Value evaluate(final @NotNull ExecutionContext<Object> context, final @NotNull Arguments arguments) {
+            return function.evaluate(context, arguments);
+        }
+
+        @Override
+        public boolean pure() {
+            return true;
+        }
     }
 }

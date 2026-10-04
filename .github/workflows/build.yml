@@ -1,5 +1,11 @@
 name: 'build'
-on: [ 'workflow_dispatch' ]
+on:
+    push:
+        branches: [ 'main' ]
+    pull_request:
+
+permissions:
+    contents: read
 
 jobs:
     build:
@@ -8,26 +14,18 @@ jobs:
             - name: Checkout Branch
               uses: actions/checkout@v7
 
-            - name: Restore gradle.properties
-              shell: bash
-              env:
-                  MAVEN_TOKEN: ${{ secrets.MAVEN_TOKEN }}
-              run: |
-                  mkdir -p ~/.gradle/
-                  echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
-                  echo "${MAVEN_TOKEN}" > ~/.gradle/gradle.properties
-
             - name: Setup Java
               uses: actions/setup-java@v6
               with:
                   distribution: microsoft
                   java-version: 25
+                  cache: gradle
 
-            - name: Grant Execute Permission
-              run: chmod +x gradlew
+            # the tests compare with expectations.txt, which MolangJS generates from tests.txt
+            - name: Check MolangJS Expectations
+              run: |
+                  ./gradlew :runtime-compiler:generateExpectations
+                  git diff --exit-code -- runtime-compiler/src/test/resources/expectations.txt
 
             - name: Build
-              run: |
-                  ./gradlew publish
-              env:
-                  MAVEN_PASSWORD: ${{ secrets.REDLANCE_PASSWORD }}
+              run: ./gradlew build

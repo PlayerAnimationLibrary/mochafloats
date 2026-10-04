@@ -30,13 +30,19 @@ import org.redlance.mocha.parser.ast.*;
 import org.redlance.mocha.runtime.binding.JavaFunction;
 import org.redlance.mocha.runtime.value.*;
 
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static java.util.Objects.requireNonNull;
 
 @ApiStatus.Internal
 public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>, ExecutionContext<T> {
+    // methods already reported by warnOnReflectiveFunctionUsage, each one is reported once
+    private static final Set<Method> REPORTED_REFLECTIVE_METHODS = ConcurrentHashMap.newKeySet();
+
     private static final List<Evaluator> BINARY_EVALUATORS = Arrays.asList(
             bool((a, b) -> a.eval() && b.eval()),
             bool((a, b) -> a.eval() || b.eval()),
@@ -73,12 +79,9 @@ public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>,
                 }
             },
             (evaluator, a, b) -> { // null coalesce
-                final Value val = a.visit(evaluator);
-                if (val.getAsBoolean()) {
-                    return val;
-                } else {
-                    return b.visit(evaluator);
-                }
+                // only a missing value falls back, 0 counts as present
+                final Value val = evaluator.valueIfPresent(a);
+                return val != null ? val : b.visit(evaluator);
             },
             (evaluator, a, b) -> { // assignation
                 final Value val = b.visit(evaluator);
@@ -110,8 +113,8 @@ public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>,
                 }
                 return NumberValue.zero();
             },
-            arithmetic((a, b) -> ((a.eval() == b.eval()) ? 1.0F : 0.0F)), // eq
-            arithmetic((a, b) -> ((a.eval() != b.eval()) ? 1.0F : 0.0F))  // neq
+            equality(true), // eq
+            equality(false) // neq
     );
 
     private final T entity;
@@ -138,6 +141,18 @@ public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>,
                 () -> a.visit(evaluator).getAsNumber(),
                 () -> b.visit(evaluator).getAsNumber()
         ));
+    }
+
+    // two strings compare by their text, like in Bedrock, anything else compares as numbers
+    private static Evaluator equality(final boolean equal) {
+        return (evaluator, a, b) -> {
+            final Value left = a.visit(evaluator);
+            final Value right = b.visit(evaluator);
+            final boolean same = left instanceof StringValue leftString && right instanceof StringValue rightString
+                    ? leftString.value().equals(rightString.value())
+                    : left.getAsNumber() == right.getAsNumber();
+            return Value.of(same == equal);
+        };
     }
 
     private static Evaluator arithmetic(ArithmeticOperator op) {
@@ -300,12 +315,14 @@ public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>,
             return Value.nil();
         }
 
-        if (warnOnReflectiveFunctionUsage && function instanceof JavaFunction) {
-            final JavaFunction<?> javaFunction = (JavaFunction<?>) function;
+        if (warnOnReflectiveFunctionUsage && function instanceof JavaFunction<?> javaFunction
+                && javaFunction.reflective() && REPORTED_REFLECTIVE_METHODS.add(javaFunction.method())) {
             System.err.println("Warning: Reflective function usage detected for method: " + javaFunction.method());
         }
 
-        return ((Function<T>) function).evaluate(this, args);
+        // a function may return null for nothing, which must read as zero like Value.nil()
+        final Value result = ((Function<T>) function).evaluate(this, args);
+        return result == null ? Value.nil() : result;
     }
 
     @Override
@@ -333,6 +350,22 @@ public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>,
     @Override
     public @NotNull Value visitIdentifier(final @NotNull IdentifierExpression expression) {
         return scope.get(expression.name());
+    }
+
+    // the value of the expression, or null when it names a variable or property that doesn't exist
+    private @Nullable Value valueIfPresent(final @NotNull Expression expression) {
+        final ObjectProperty property;
+        if (expression instanceof AccessExpression access) {
+            if (!(access.object().visit(this) instanceof ObjectValue object)) {
+                return null;
+            }
+            property = object.getProperty(access.property());
+        } else if (expression instanceof IdentifierExpression identifier) {
+            property = scope.getProperty(identifier.name());
+        } else {
+            return expression.visit(this);
+        }
+        return property == null ? null : property.value();
     }
 
     @Override
@@ -384,9 +417,15 @@ public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>,
     @Override
     public @NotNull Value visitTernaryConditional(@NotNull TernaryConditionalExpression expression) {
         final Value conditionResult = expression.condition().visit(this);
-        return conditionResult.getAsBoolean()
-                ? expression.trueExpression().visit(this)
-                : expression.falseExpression().visit(this);
+        final Expression branch = conditionResult.getAsBoolean()
+                ? expression.trueExpression()
+                : expression.falseExpression();
+        final Value value = branch.visit(this);
+        // a block branch runs, like the block of "c ? { ... }" does
+        if (branch instanceof ExecutionScopeExpression && value instanceof Function<?> block) {
+            return Value.of(((Function<T>) block).evaluate(this));
+        }
+        return value;
     }
 
     @Override

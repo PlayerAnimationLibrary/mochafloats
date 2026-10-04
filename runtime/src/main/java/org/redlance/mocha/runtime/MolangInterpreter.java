@@ -357,7 +357,7 @@ public final class MolangInterpreter<T> {
      * <p>When set to true, {@link #eval} may log a warning when evaluating
      * code that includes a call to a function that was registered using only
      * annotations and therefore has to be invoked via Reflection, taking some
-     * extra time.</p>
+     * extra time. Each method is reported once.</p>
      *
      * <p>Note that this behavior can be avoided by setting an
      * {@link ObjectValue} when binding static or non-static methods and fields.</p>

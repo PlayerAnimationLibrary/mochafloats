@@ -42,7 +42,8 @@ public final class StringExpression implements Expression {
     private final String value;
 
     public StringExpression(ByteBuf buf) {
-        this(ProtocolUtils.readString(buf));
+        // writeString writes an empty string like null, and a literal is never null
+        this(Objects.requireNonNullElse(ProtocolUtils.readString(buf), ""));
     }
 
     public StringExpression(final @NotNull String value) {
