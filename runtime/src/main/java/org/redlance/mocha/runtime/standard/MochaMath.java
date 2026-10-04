@@ -61,7 +61,6 @@ public final class MochaMath implements ObjectValue {
     private static final double RADIAN = Math.toRadians(1);
 
     private static final Random RANDOM = new Random();
-    private static final int DECIMAL_PART = 4;
 
     // the functions below back the Java bindings of this class, and
     // JavaObjectBinding.of requires a backing function to be exactly as pure as its binding
@@ -202,20 +201,22 @@ public final class MochaMath implements ObjectValue {
         return (float) Math.cos(value * RADIAN);
     }
 
+    // the sum of "amount" random numbers between low and high
     @Binding("die_roll")
     public static float dieRoll(final float amount, final float low, final float high) {
         float result = 0;
         for (int i = 0; i < amount; i++) {
-            result += RANDOM.nextInt((int) high) + low;
+            result += random(low, high);
         }
-        return result / DECIMAL_PART;
+        return result;
     }
 
+    // the sum of "amount" random whole numbers from low to high, both included
     @Binding("die_roll_integer")
     public static float dieRollInteger(final float amount, final float low, final float high) {
         int result = 0;
         for (int i = 0; i < amount; i++) {
-            result += RANDOM.nextInt((int) low, (int) high);
+            result += randomInteger(low, high);
         }
         return result;
     }
@@ -272,14 +273,18 @@ public final class MochaMath implements ObjectValue {
         return a % b;
     }
 
+    // between the two bounds, in either order (Random.nextFloat(min, max) would throw unless min < max)
     @Binding("random")
     public static float random(final float min, final float max) {
-        return RANDOM.nextFloat(min, max);
+        return min + RANDOM.nextFloat() * (max - min);
     }
 
+    // from the smaller bound to the bigger one, both included
     @Binding("random_integer")
     public static int randomInteger(final float min, final float max) {
-        return RANDOM.nextInt((int) min, (int) max);
+        final int low = (int) Math.min(min, max);
+        final int high = (int) Math.max(min, max);
+        return (int) (low + RANDOM.nextLong((long) high - low + 1));
     }
 
     @Binding(value = "sign", pure = true)

@@ -79,12 +79,9 @@ public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>,
                 }
             },
             (evaluator, a, b) -> { // null coalesce
-                final Value val = a.visit(evaluator);
-                if (val.getAsBoolean()) {
-                    return val;
-                } else {
-                    return b.visit(evaluator);
-                }
+                // only a missing value falls back, 0 counts as present
+                final Value val = evaluator.valueIfPresent(a);
+                return val != null ? val : b.visit(evaluator);
             },
             (evaluator, a, b) -> { // assignation
                 final Value val = b.visit(evaluator);
@@ -343,6 +340,22 @@ public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>,
         return scope.get(expression.name());
     }
 
+    // the value of the expression, or null when it names a variable or property that doesn't exist
+    private @Nullable Value valueIfPresent(final @NotNull Expression expression) {
+        final ObjectProperty property;
+        if (expression instanceof AccessExpression access) {
+            if (!(access.object().visit(this) instanceof ObjectValue object)) {
+                return null;
+            }
+            property = object.getProperty(access.property());
+        } else if (expression instanceof IdentifierExpression identifier) {
+            property = scope.getProperty(identifier.name());
+        } else {
+            return expression.visit(this);
+        }
+        return property == null ? null : property.value();
+    }
+
     @Override
     public @NotNull Value visitBinary(@NotNull BinaryExpression expression) {
         return BINARY_EVALUATORS.get(expression.op().ordinal()).eval(
@@ -392,9 +405,15 @@ public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>,
     @Override
     public @NotNull Value visitTernaryConditional(@NotNull TernaryConditionalExpression expression) {
         final Value conditionResult = expression.condition().visit(this);
-        return conditionResult.getAsBoolean()
-                ? expression.trueExpression().visit(this)
-                : expression.falseExpression().visit(this);
+        final Expression branch = conditionResult.getAsBoolean()
+                ? expression.trueExpression()
+                : expression.falseExpression();
+        final Value value = branch.visit(this);
+        // a block branch runs, like the block of "c ? { ... }" does
+        if (branch instanceof ExecutionScopeExpression && value instanceof Function<?> block) {
+            return Value.of(((Function<T>) block).evaluate(this));
+        }
+        return value;
     }
 
     @Override
