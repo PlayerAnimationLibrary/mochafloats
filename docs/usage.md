@@ -1,85 +1,74 @@
 ## Usage
 
-Create a new MochaEngine instance with the static factory method `MochaEngine.createStandard()`,
-which will create the instance with the standard configuration, where everything tries to be
-as spec-compliant as possible.
-
-<!--@formatter:off-->
-```java
-MochaEngine<?> mocha = MochaEngine.createStandard();
-```
-<!--@formatter:on-->
-
-Then we can either evaluate (interpret) or compile Molang code.
-
 ### Evaluate
 
-To evaluate expressions we can just use the `eval` method.
+`MolangInterpreter.standard()` creates an interpreter with the standard `math`, `variable`
+and `v` bindings. `eval` parses and evaluates Molang code and returns a `float`.
 
 <!--@formatter:off-->
 ```java
-float result = mocha.eval("math.sqrt(3 * 3 + 4 * 4)");
+MolangInterpreter<?> molang = MolangInterpreter.standard();
+
+float result = molang.eval("math.sqrt(3 * 3 + 4 * 4)");
 // evaluates to 5.0
 
-float result2 = mocha.eval("math.abs(-5) + 5");
+float result2 = molang.eval("math.abs(-5) + 5");
 // evaluates to 10.0
 ```
 <!--@formatter:on-->
 
-Or if we might want to evaluate the same expression multiple times,
-we can cache the parsed expressions.
+To evaluate the same code many times, parse it once and keep the expressions.
 
 <!--@formatter:off-->
 ```java
-MochaFunction function = mocha.prepareEval("math.sqrt(3 * 3 + 4 * 4)");
+List<Expression> expressions = MolangParser.parseAll("math.sqrt(3 * 3 + 4 * 4)");
 
-function.evaluate();
-// evaluates to 5.0
-
-function.evaluate();
+molang.eval(expressions);
 // evaluates to 5.0
 ```
 <!--@formatter:on-->
+
+`prepareEval(code)` does the same and returns a `Supplier<Float>`.
 
 ### Compile
 
-Compiling expressions is pretty similar to preparing them and evaluating them
-later, but faster.
+`MochaEngine` (in `runtime-compiler`) holds an interpreter and a compiler that share one
+scope. A compiled function runs without any interpretation overhead; constant parts are
+evaluated while compiling.
 
 <!--@formatter:off-->
 ```java
-MochaFunction function = mocha.compile("math.sqrt(3 * 3 + 4 * 4)");
-// will compile a class that implements MochaFunction, with the following
-// code:
-//     return Math.sqrt(25);
-// note that the compiler can optimize constant expressions like 3*3+4*4 to just 25
+MochaEngine<?> engine = MochaEngine.createStandard();
+
+MochaFunction function = engine.compiler().compile("math.sqrt(3 * 3 + 4 * 4)");
+// compiles a class that implements MochaFunction and returns 5.0
 
 function.evaluate();
-// evaluates to 5.0, no interpretation overhead
-
-function.evaluate();
-// evaluates to 5.0, no interpretation overhead
+// evaluates to 5.0
 ```
 <!--@formatter:on-->
 
-We could also specify the function type we would like to get.
+The compiled class can implement your own interface with a single method; its parameters
+are available by name.
 
 <!--@formatter:off-->
 ```java
 interface CompareFunction extends MochaCompiledFunction {
-    boolean compare(@Named("a") double a, @Named("b") double b);
+    boolean compare(@Named("a") float a, @Named("b") float b);
 }
 
 // ...
-CompareFunction gt = mocha.compile("a > b", CompareFunction.class);
+CompareFunction gt = engine.compiler().compile("a > b", CompareFunction.class);
 
 gt.compare(5, 4);
 // true
 
 gt.compare(4, 5);
 // false
-
-gt.compare(5, 5);
-// false
 ```
 <!--@formatter:on-->
+
+The compiler supports a subset of Molang: arithmetic, comparisons, logic, conditionals,
+temp variables, interface parameters and Java methods and static fields bound with
+`@Binding`. Evaluate anything else, such as `variable`, loops or lambda bindings, with the
+interpreter.

@@ -1,16 +1,18 @@
 ## Installation
 
-You can add `mocha` to your project using [Gradle](https://gradle.org/)
-*(recommended)*, [Maven](https://maven.apache.org/) or manually downloading the
-JAR files from [GitHub Releases](https://github.com/unnamed/mocha/releases).
-
-Note that `mocha` is available in the Maven Central Repository.
+mochafloats is published to `https://repo.redlance.org/public` under the group
+`org.redlance.mochafloats`, with one artifact per module: `lexer`, `parser`, `runtime`
+and `runtime-compiler`. It requires Java 24 or newer.
 
 ### Gradle
 
 ```kotlin
+repositories {
+    maven("https://repo.redlance.org/public")
+}
+
 dependencies {
-    implementation("team.unnamed:mocha:%%REPLACE_latestRelease{team.unnamed:mocha}%%")
+    implementation("org.redlance.mochafloats:runtime:<version>")
 }
 ```
 
@@ -18,10 +20,22 @@ dependencies {
 
 <!--@formatter:off-->
 ```xml
-<dependency>
-    <groupId>team.unnamed</groupId>
-    <artifactId>mocha</artifactId>
-    <version>%%REPLACE_latestRelease{team.unnamed:mocha}%%</version>
-</dependency>
+<repositories>
+    <repository>
+        <id>redlance</id>
+        <url>https://repo.redlance.org/public</url>
+    </repository>
+</repositories>
+
+<dependencies>
+    <dependency>
+        <groupId>org.redlance.mochafloats</groupId>
+        <artifactId>runtime</artifactId>
+        <version>VERSION</version>
+    </dependency>
+</dependencies>
 ```
 <!--@formatter:on-->
+
+Use `runtime-compiler` instead of `runtime` to compile expressions to bytecode.
+The `parser` module depends on `netty-buffer`, which Minecraft already provides.
