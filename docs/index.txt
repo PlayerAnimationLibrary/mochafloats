@@ -1,4 +1,0 @@
-getting-started.md
-installation.md
-usage.md
-bindings.md

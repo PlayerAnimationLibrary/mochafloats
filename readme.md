@@ -20,4 +20,3 @@ float result = molang.eval("math.sqrt(3 * 3 + 4 * 4)"); // 5.0
 
 The documentation, with installation, usage and the differences from Mocha, is at
 [docs.zigythebird.com/mochafloats](https://docs.zigythebird.com/mochafloats/intro).
-The [`docs`](docs) folder has a short version.
