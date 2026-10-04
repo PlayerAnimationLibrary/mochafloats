@@ -89,6 +89,10 @@ final class MolangParserImpl implements MolangParser {
                 lexer.next();
                 List<Expression> expressions = new ArrayList<>();
                 while (true) {
+                    // empty statements are skipped, like Bedrock does with "{ v.a = 1;; }"
+                    while (lexer.current().kind() == TokenKind.SEMICOLON) {
+                        lexer.next();
+                    }
                     // "{}" and a semicolon after the last statement, as in "{ v.a = 1; }"
                     if (lexer.current().kind() == TokenKind.RBRACE) {
                         lexer.next();
@@ -364,6 +368,11 @@ final class MolangParserImpl implements MolangParser {
     //
     private @Nullable Expression next0() throws IOException {
         Token token = lexer.next();
+
+        // empty statements are skipped, like Bedrock does with "v.a = 1;; v.b = 2"
+        while (token.kind() == TokenKind.SEMICOLON) {
+            token = lexer.next();
+        }
 
         if (token.kind() == TokenKind.EOF) {
             // reached end-of-file!

@@ -35,7 +35,7 @@ import static org.redlance.mocha.parser.ParserAssertions.assertCreateTree;
 
 /**
  * Grouping of assignments and conditionals, and incomplete scripts, decided
- * by what the majority of other MoLang implementations do.
+ * by what Bedrock and the majority of other MoLang implementations do.
  */
 class GroupingTest {
     private static Expression access(final String object, final String property) {
@@ -73,16 +73,21 @@ class GroupingTest {
     @Test
     void incomplete_scripts_are_errors() {
         for (final String code : new String[]{
-                "v.a = 1;; v.b = 2; return v.b;",
-                "v.a = 1; ; return 5;",
                 "1 +",
                 "math.abs(1,)",
                 "q.a ? : 1",
-                "return;",
-                "{ v.a = 1;; }"
+                "return;"
         }) {
             assertThrows(ParseException.class, () -> MolangParser.parseAll(code), code);
         }
+    }
+
+    @Test
+    void empty_statements_are_skipped() throws IOException {
+        assertEquals(MolangParser.parseAll("v.a = 1; v.b = 2; return v.b;"), MolangParser.parseAll("v.a = 1;; v.b = 2; return v.b;"));
+        assertEquals(MolangParser.parseAll("v.a = 1; return 5;"), MolangParser.parseAll("v.a = 1; ; return 5;"));
+        assertEquals(MolangParser.parseAll("v.a = 1"), MolangParser.parseAll(";; v.a = 1;;"));
+        assertEquals(MolangParser.parseAll("{ v.a = 1; }"), MolangParser.parseAll("{ ; v.a = 1;; }"));
     }
 
     @Test
