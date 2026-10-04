@@ -51,7 +51,6 @@ import java.util.Set;
 @BindExternalFunction(at = Math.class, name = "abs", args = {float.class}, pure = true)
 @BindExternalFunction(at = Math.class, name = "max", args = {float.class, float.class}, pure = true)
 @BindExternalFunction(at = Math.class, name = "min", args = {float.class, float.class}, pure = true)
-@BindExternalFunction(at = Math.class, name = "round", args = {float.class}, pure = true)
 public final class MochaMath implements ObjectValue {
     @Binding("pi")
     public static final float PI = (float) Math.PI;
@@ -103,7 +102,7 @@ public final class MochaMath implements ObjectValue {
         setFunction("pow", MochaMath::pow);
         setFunction("random", MochaMath::random);
         setFunction("random_integer", MochaMath::randomInteger);
-        setFunction("round", Math::round);
+        setFunction("round", MochaMath::round);
         setFunction("sign", MochaMath::sign);
         setFunction("sin", MochaMath::sin);
         setFunction("sqrt", MochaMath::sqrt);
@@ -297,6 +296,12 @@ public final class MochaMath implements ObjectValue {
     @Binding(value = "sin", pure = true)
     public static float sin(final float value) {
         return (float) Math.sin(value * RADIAN);
+    }
+
+    // halves round away from zero like in Bedrock, so -2.5 is -3 (Math.round would give -2)
+    @Binding(value = "round", pure = true)
+    public static float round(final float value) {
+        return (float) Math.copySign(Math.floor(Math.abs((double) value) + 0.5), value);
     }
 
     @Binding(value = "trunc", pure = true)

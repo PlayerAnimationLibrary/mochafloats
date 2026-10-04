@@ -113,8 +113,8 @@ public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>,
                 }
                 return NumberValue.zero();
             },
-            arithmetic((a, b) -> ((a.eval() == b.eval()) ? 1.0F : 0.0F)), // eq
-            arithmetic((a, b) -> ((a.eval() != b.eval()) ? 1.0F : 0.0F))  // neq
+            equality(true), // eq
+            equality(false) // neq
     );
 
     private final T entity;
@@ -141,6 +141,18 @@ public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>,
                 () -> a.visit(evaluator).getAsNumber(),
                 () -> b.visit(evaluator).getAsNumber()
         ));
+    }
+
+    // two strings compare by their text, like in Bedrock, anything else compares as numbers
+    private static Evaluator equality(final boolean equal) {
+        return (evaluator, a, b) -> {
+            final Value left = a.visit(evaluator);
+            final Value right = b.visit(evaluator);
+            final boolean same = left instanceof StringValue leftString && right instanceof StringValue rightString
+                    ? leftString.value().equals(rightString.value())
+                    : left.getAsNumber() == right.getAsNumber();
+            return Value.of(same == equal);
+        };
     }
 
     private static Evaluator arithmetic(ArithmeticOperator op) {

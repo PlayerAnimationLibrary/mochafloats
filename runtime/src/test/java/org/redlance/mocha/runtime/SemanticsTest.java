@@ -33,12 +33,35 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Behaviour decided by what the majority of other MoLang implementations
- * (MolangJS, bridge's molang, bedrockk/MoLang, Moonflower's
+ * Behaviour decided by what Bedrock and the majority of other MoLang
+ * implementations (MolangJS, bridge's molang, bedrockk/MoLang, Moonflower's
  * molang-compiler, molang-py) do.
  */
 class SemanticsTest {
     private static final int SAMPLES = 5_000;
+
+    @Test
+    void strings_compare_by_text() {
+        final MolangInterpreter<?> molang = MolangInterpreter.standard();
+        assertEquals(0F, molang.eval("'a' == 'b'"));
+        assertEquals(1F, molang.eval("'a' == 'a'"));
+        assertEquals(1F, molang.eval("'a' != 'b'"));
+        assertEquals(0F, molang.eval("'a' != 'a'"));
+        assertEquals(1F, molang.eval("v.name = 'steve'; return v.name == 'steve';"));
+        assertEquals(0F, molang.eval("v.name = 'steve'; return v.name == 'alex';"));
+        // a string and a number still compare as numbers, a string being 0
+        assertEquals(1F, molang.eval("'a' == 0"));
+    }
+
+    @Test
+    void halves_round_away_from_zero() {
+        final MolangInterpreter<?> molang = MolangInterpreter.standard();
+        assertEquals(-3F, molang.eval("math.round(-2.5)"));
+        assertEquals(3F, molang.eval("math.round(2.5)"));
+        assertEquals(-2F, molang.eval("math.round(-2.4)"));
+        assertEquals(11F, molang.eval("math.round(10.5)"));
+        assertEquals(0F, molang.eval("math.round(0.49999997)"));
+    }
 
     @Test
     void blocks_in_conditionals_run() {
