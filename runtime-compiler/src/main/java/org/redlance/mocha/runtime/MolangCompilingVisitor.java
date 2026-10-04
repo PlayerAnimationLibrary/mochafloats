@@ -25,11 +25,14 @@ package org.redlance.mocha.runtime;
 
 import com.google.j2objc.annotations.J2ObjCIncompatible;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.redlance.mocha.parser.ast.*;
+import org.redlance.mocha.runtime.binding.Binding;
 import org.redlance.mocha.runtime.binding.Entity;
 import org.redlance.mocha.runtime.binding.JavaFieldBinding;
 import org.redlance.mocha.runtime.binding.JavaFunction;
 import org.redlance.mocha.runtime.binding.JavaObjectBinding;
+import org.redlance.mocha.runtime.binding.Lazy;
 import org.redlance.mocha.runtime.value.Function;
 import org.redlance.mocha.runtime.value.NumberValue;
 import org.redlance.mocha.runtime.value.ObjectValue;
@@ -114,34 +117,27 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
     public CompileVisitResult visitBinary(final @NotNull BinaryExpression expression) {
         final BinaryExpression.Op op = expression.op();
 
-        if (op == BinaryExpression.Op.ASSIGN) {
-            final Expression left = expression.left();
-            if (left instanceof AccessExpression) {
-                final Expression objectExpr = ((AccessExpression) left).object();
-                if (objectExpr instanceof IdentifierExpression) {
-                    final String name = ((IdentifierExpression) objectExpr).name();
-                    final String property = ((AccessExpression) left).property();
-
-                    if (name.equals("temp") || name.equals("t")) {
-                        final CompileVisitResult result = expression.right().visit(this);
-                        final int localIndex = localsByName.computeIfAbsent(property, k -> {
-                            int index = functionCompileState.maxLocals();
-                            if (result.lastPushedType() != null &&
-                                    (result.lastPushedType().equals(CD_double) || result.lastPushedType().equals(CD_long))) {
-                                functionCompileState.maxLocals(index + 2);
-                            } else {
-                                functionCompileState.maxLocals(index + 1);
-                            }
-                            return index;
-                        });
-                        codeBuilder.fstore(localIndex);
-                        return null;
-                    }
-                }
-            }
-        }
-
         final ClassDesc currentExpectedType = expectedType;
+
+        if (op == BinaryExpression.Op.ASSIGN) {
+            if (expression.left() instanceof AccessExpression access && isTemp(access)) {
+                // temp variables are float locals, so the value must be a float
+                // whatever the method returns, they are read back with fload
+                expectedType = CD_float;
+                expression.right().visit(this);
+                expectedType = currentExpectedType;
+                final int localIndex = localsByName.computeIfAbsent(access.property(), k -> {
+                    final int index = functionCompileState.maxLocals();
+                    functionCompileState.maxLocals(index + 1);
+                    return index;
+                });
+                // keep the assigned value on the stack, the interpreter evaluates an assignment to it too
+                codeBuilder.dup();
+                codeBuilder.fstore(localIndex);
+                return castTo(CD_float, currentExpectedType);
+            }
+            throw unsupported("assignments to anything but temp variables", expression);
+        }
 
         //@formatter:off
         switch (op) {
@@ -211,45 +207,85 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
                 codeBuilder.labelBinding(end);
                 return new CompileVisitResult(expectedType == null ? CD_boolean : expectedType);
             }
-            case ADD: {
-                expectedType = CD_float;
-                expression.left().visit(this);
-                expression.right().visit(this);
-                expectedType = currentExpectedType;
-                codeBuilder.fadd();
-                return CompileVisitResult.FLOAT;
-            }
-            case SUB: {
-                expectedType = CD_float;
-                expression.left().visit(this);
-                expression.right().visit(this);
-                expectedType = currentExpectedType;
-                codeBuilder.fsub();
-                return CompileVisitResult.FLOAT;
-            }
-            case MUL: {
-                expectedType = CD_float;
-                expression.left().visit(this);
-                expression.right().visit(this);
-                expectedType = currentExpectedType;
-                codeBuilder.fmul();
-                return CompileVisitResult.FLOAT;
-            }
+            case ADD:
+            case SUB:
+            case MUL:
             case DIV: {
                 expectedType = CD_float;
                 expression.left().visit(this);   // pushes lhs value to stack
                 expression.right().visit(this);  // pushes rhs value to stack
                 expectedType = currentExpectedType;
-                codeBuilder.fdiv();
-                return CompileVisitResult.FLOAT;
+                switch (op) {
+                    case ADD -> codeBuilder.fadd();
+                    case SUB -> codeBuilder.fsub();
+                    case MUL -> codeBuilder.fmul();
+                    default -> addDivision();
+                }
+                // like the interpreter, which never produces NaN or infinities
+                addNormalize(CD_float);
+                return castTo(CD_float, currentExpectedType);
             }
-            case ARROW:
-            case NULL_COALESCE:
             case CONDITIONAL:
-                break;
+                // "a ? b" is "a ? b : 0"
+                return new TernaryConditionalExpression(expression.left(), expression.right(), FloatExpression.ZERO).visit(this);
+            case ARROW:
+                throw unsupported("the arrow operator (->)", expression);
+            case NULL_COALESCE:
+                throw unsupported("the null coalescing operator (??)", expression);
+            default:
+                throw new IllegalStateException("Unknown binary operator: " + op);
         }
         //@formatter:on
-        return null;
+    }
+
+    // MoLang divides by zero as zero, the stack holds the dividend and the divisor
+    private void addDivision() {
+        final Label divide = codeBuilder.newLabel();
+        final Label end = codeBuilder.newLabel();
+        codeBuilder.dup();
+        codeBuilder.fconst_0();
+        codeBuilder.fcmpl();
+        codeBuilder.ifne(divide);
+        codeBuilder.pop2();
+        codeBuilder.fconst_0();
+        codeBuilder.goto_(end);
+        codeBuilder.labelBinding(divide);
+        codeBuilder.fdiv();
+        codeBuilder.labelBinding(end);
+    }
+
+    // replaces NaN and infinities on the stack with zero, like NumberValue does
+    private void addNormalize(final @NotNull ClassDesc type) {
+        if (type.equals(CD_float) || type.equals(CD_double)) {
+            codeBuilder.invokestatic(classDescOf(NumberValue.class), "normalize", MethodTypeDesc.of(type, type));
+        }
+    }
+
+    // converts the value on the stack to the type the caller expects, if it expects one
+    private @NotNull CompileVisitResult castTo(final @NotNull ClassDesc from, final @Nullable ClassDesc to) {
+        if (to == null || to.equals(from)) {
+            return new CompileVisitResult(from);
+        }
+        if (to.equals(CD_void)) {
+            if (from.equals(CD_double) || from.equals(CD_long)) {
+                codeBuilder.pop2();
+            } else if (!from.equals(CD_void)) {
+                codeBuilder.pop();
+            }
+            return CompileVisitResult.VOID;
+        }
+        ClassFileUtil.addCast(codeBuilder, from, to);
+        return new CompileVisitResult(to);
+    }
+
+    private static boolean isTemp(final @NotNull AccessExpression access) {
+        return access.object() instanceof IdentifierExpression identifier
+                && (identifier.name().equals("temp") || identifier.name().equals("t"));
+    }
+
+    private static @NotNull UnsupportedOperationException unsupported(final @NotNull String what, final @NotNull Expression expression) {
+        return new UnsupportedOperationException("The compiler doesn't support " + what + " (in '" + expression
+                + "'), evaluate this expression with MolangInterpreter instead");
     }
 
     public void endVisit() {
@@ -468,49 +504,48 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
 
     @Override
     public CompileVisitResult visitAccess(final @NotNull AccessExpression expression) {
-        final Expression objectExpr = expression.object();
         final String property = expression.property();
 
-        if (objectExpr instanceof IdentifierExpression) {
-            final String name = ((IdentifierExpression) objectExpr).name();
-            if (name.equals("temp") || name.equals("t")) {
-                // temps are locals
-                final Integer localIndex = localsByName.get(property);
-                if (localIndex == null) {
-                    codeBuilder.fconst_0();
-                } else {
-                    codeBuilder.fload(localIndex);
-                }
-                return CompileVisitResult.FLOAT;
+        if (isTemp(expression)) {
+            // temps are float locals, an unassigned one reads as zero
+            final Integer localIndex = localsByName.get(property);
+            if (localIndex == null) {
+                codeBuilder.fconst_0();
+            } else {
+                codeBuilder.fload(localIndex);
             }
+            return castTo(CD_float, expectedType);
         }
 
-        final Value objectValue = objectExpr.visit(this.scopeResolver);
+        final Value objectValue = expression.object().visit(this.scopeResolver);
 
-        if (objectValue instanceof ObjectValue) {
-            final ObjectValue actualObjectValue = (ObjectValue) objectValue;
-            if (actualObjectValue instanceof JavaObjectBinding) {
-                final JavaFieldBinding javaFieldBinding = ((JavaObjectBinding) actualObjectValue).getField(property);
-                if (javaFieldBinding == null) {
-                    // push zero only
-                    codeBuilder.fconst_0();
-                } else if (javaFieldBinding.constant()) {
-                    // inline const
-                    codeBuilder.loadConstant(javaFieldBinding.get().getAsNumber());
-                } else {
-                    final Field field = javaFieldBinding.field();
-                    if (Modifier.isStatic(field.getModifiers())) {
-                        codeBuilder.getstatic(
-                                classDescOf(field.getDeclaringClass()),
-                                field.getName(),
-                                classDescOf(field.getType())
-                        );
-                    }
-                }
+        if (objectValue instanceof JavaObjectBinding javaObjectBinding) {
+            final JavaFieldBinding javaFieldBinding = javaObjectBinding.getField(property);
+            if (javaFieldBinding == null) {
+                // not a field, reads as zero like in the interpreter
+                codeBuilder.fconst_0();
+                return castTo(CD_float, expectedType);
+            } else if (javaFieldBinding.constant()) {
+                // inline const
+                codeBuilder.loadConstant(javaFieldBinding.get().getAsNumber());
+                return castTo(CD_float, expectedType);
             }
+
+            final Field field = javaFieldBinding.field();
+            if (field == null || !Modifier.isStatic(field.getModifiers())) {
+                throw unsupported("non-static fields", expression);
+            }
+            final ClassDesc fieldType = classDescOf(field.getType());
+            codeBuilder.getstatic(classDescOf(field.getDeclaringClass()), field.getName(), fieldType);
+            return castTo(fieldType, expectedType);
+        } else if (objectValue instanceof ObjectValue) {
+            throw unsupported("reading properties of " + expression.object()
+                    + ", only temp variables and @Binding static fields can be read", expression);
         }
 
-        return null;
+        // unknown names evaluate to zero
+        codeBuilder.fconst_0();
+        return castTo(CD_float, expectedType);
     }
 
     @Override
@@ -518,26 +553,34 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
         final ClassDesc targetType = this.expectedType;
         final Expression functionExpr = expression.function();
 
+        if (functionExpr instanceof IdentifierExpression identifier
+                && (identifier.name().equals("loop") || identifier.name().equals("for_each"))) {
+            throw unsupported(identifier.name(), expression);
+        }
+
         final Value functionValue = functionExpr.visit(this.scopeResolver);
 
         if (!(functionValue instanceof Function<?>)) {
-            // not a function, just add 0
+            // not a function, calling it evaluates to zero like in the interpreter
             codeBuilder.fconst_0();
-            return CompileVisitResult.FLOAT;
+            return castTo(CD_float, targetType);
         }
 
         final Function<?> function = (Function<?>) functionValue;
 
-        if (function instanceof JavaFunction<?>) {
+        if (function instanceof JavaFunction<?> javaFunction && javaFunction.method() != null) {
             // we can compile to directly call this function (Java Method)
-            final JavaFunction<?> javaFunction = (JavaFunction<?>) function;
             final Method nativeMethod = javaFunction.method();
             final Parameter[] parameters = nativeMethod.getParameters();
             final List<Expression> arguments = expression.arguments();
 
             final ClassDesc[] ctParameters = new ClassDesc[parameters.length];
             for (int i = 0; i < parameters.length; i++) {
-                ctParameters[i] = classDescOf(parameters[i].getType());
+                final Class<?> parameterType = parameters[i].getType();
+                if (parameterType == ExecutionContext.class || parameterType == Lazy.class || parameters[i].isVarArgs()) {
+                    throw unsupported("calling " + nativeMethod.getName() + ", which takes an ExecutionContext, a Lazy or varargs", expression);
+                }
+                ctParameters[i] = classDescOf(parameterType);
             }
 
             final boolean isStatic = Modifier.isStatic(nativeMethod.getModifiers());
@@ -613,20 +656,27 @@ final class MolangCompilingVisitor implements ExpressionVisitor<CompileVisitResu
                 }
                 return CompileVisitResult.VOID;
             } else {
-                if (targetType != null && !returnTypeDesc.equals(targetType)) {
-                    ClassFileUtil.addCast(codeBuilder, returnTypeDesc, targetType);
-                    return new CompileVisitResult(targetType);
+                // the interpreter replaces NaN and infinities returned by Java methods with zero
+                final Binding binding = nativeMethod.getDeclaredAnnotation(Binding.class);
+                if (binding == null || !binding.skipChecking()) {
+                    addNormalize(returnTypeDesc);
                 }
-                return new CompileVisitResult(returnTypeDesc);
+                return castTo(returnTypeDesc, targetType);
             }
         } else {
-            throw new UnsupportedOperationException("Not supporting non-Java functions yet");
+            throw unsupported("functions that aren't Java methods bound with @Binding", expression);
         }
     }
 
     @Override
     public CompileVisitResult visit(final @NotNull Expression expression) {
-        throw new UnsupportedOperationException("Unsupported expression type: " + expression);
+        final String what = switch (expression) {
+            case ArrayAccessExpression ignored -> "array access";
+            case ExecutionScopeExpression ignored -> "blocks ({ ... })";
+            case StatementExpression ignored -> "break and continue";
+            default -> expression.getClass().getSimpleName();
+        };
+        throw unsupported(what, expression);
     }
 
     private void addConst0(final ClassDesc type) {
