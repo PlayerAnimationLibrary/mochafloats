@@ -61,9 +61,11 @@ final class ReflectiveFunction<T> implements Function<T> {
             return;
         }
         try {
-            MethodHandle handle = lookup.unreflect(method);
+            MethodHandle handle = lookup.unreflect(method).asFixedArity();
             if (object != null) handle = handle.bindTo(object);
-            this.mh = handle;
+            // adapt once to (Object[])Object, invokeWithArguments would build this spreader on every call
+            this.mh = handle.asType(handle.type().generic())
+                    .asSpreader(Object[].class, handle.type().parameterCount());
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }
@@ -167,7 +169,7 @@ final class ReflectiveFunction<T> implements Function<T> {
         }
 
         try {
-            return of(mh != null ? mh.invokeWithArguments(values) : method.invoke(object, values));
+            return of(mh != null ? (Object) mh.invokeExact(values) : method.invoke(object, values));
         } catch (final Throwable throwable) {
             throw new RuntimeException(throwable);
         }

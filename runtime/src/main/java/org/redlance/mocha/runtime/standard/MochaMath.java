@@ -25,15 +25,23 @@ package org.redlance.mocha.runtime.standard;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.redlance.mocha.runtime.ExecutionContext;
 import org.redlance.mocha.runtime.binding.BindExternalFunction;
 import org.redlance.mocha.runtime.binding.Binding;
+import org.redlance.mocha.runtime.value.Function;
 import org.redlance.mocha.runtime.value.NumberValue;
 import org.redlance.mocha.runtime.value.ObjectProperty;
 import org.redlance.mocha.runtime.value.ObjectValue;
 import org.redlance.mocha.runtime.util.CaseInsensitiveStringHashMap;
+import org.redlance.mocha.runtime.value.Value;
 
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 /**
  * Math function bindings inside an object
@@ -55,7 +63,20 @@ public final class MochaMath implements ObjectValue {
     private static final Random RANDOM = new Random();
     private static final int DECIMAL_PART = 4;
 
+    // the functions below back the Java bindings of this class, and
+    // JavaObjectBinding.of requires a backing function to be exactly as pure as its binding
+    private static final Set<String> PURE_FUNCTIONS = pureFunctionNames();
+
+    // kept out of entries(): a backing value would stop JavaObjectBinding from inlining the fields
+    private static final Map<String, ObjectProperty> CONSTANTS = new CaseInsensitiveStringHashMap<>();
+
+    static {
+        CONSTANTS.put("pi", ObjectProperty.property(NumberValue.of(PI), true));
+        CONSTANTS.put("e", ObjectProperty.property(NumberValue.of(E), true));
+    }
+
     private final Map<String, ObjectProperty> entries = new CaseInsensitiveStringHashMap<>();
+    private boolean frozen;
 
     public MochaMath() {
         setFunction("abs", Math::abs);
@@ -80,8 +101,6 @@ public final class MochaMath implements ObjectValue {
         setFunction("min", Math::min);
         setFunction("min_angle", MochaMath::minAngle);
         setFunction("mod", MochaMath::mod);
-        entries.put("pi", ObjectProperty.property(NumberValue.of(Math.PI), true));
-        entries.put("e", ObjectProperty.property(NumberValue.of(Math.E), true));
         setFunction("pow", MochaMath::pow);
         setFunction("random", MochaMath::random);
         setFunction("random_integer", MochaMath::randomInteger);
@@ -94,7 +113,23 @@ public final class MochaMath implements ObjectValue {
         setFunction("r2d", MochaMath::r2d);
 
         // all of our properties are constant
-        entries.replaceAll((key, property) -> ObjectProperty.property(property.value(), true));
+        frozen = true;
+    }
+
+    private static @NotNull Set<String> pureFunctionNames() {
+        final Set<String> names = new HashSet<>();
+        for (final Method method : MochaMath.class.getDeclaredMethods()) {
+            final Binding binding = method.getDeclaredAnnotation(Binding.class);
+            if (binding != null && binding.pure()) {
+                names.addAll(Arrays.asList(binding.value()));
+            }
+        }
+        for (final BindExternalFunction function : MochaMath.class.getAnnotationsByType(BindExternalFunction.class)) {
+            if (function.pure()) {
+                names.add(function.as().isEmpty() ? function.name() : function.as());
+            }
+        }
+        return names;
     }
 
     @Binding(value = "ceil", pure = true)
@@ -276,6 +311,43 @@ public final class MochaMath implements ObjectValue {
 
     @Override
     public @Nullable ObjectProperty getProperty(final @NotNull String name) {
-        return entries.get(name);
+        final ObjectProperty property = entries.get(name);
+        return property != null ? property : CONSTANTS.get(name);
+    }
+
+    @Override
+    public boolean set(final @NotNull String name, final @Nullable Value value) {
+        if (frozen || value == null) {
+            return false;
+        }
+        final Value function = value instanceof Function<?> && PURE_FUNCTIONS.contains(name)
+                ? new PureFunction((Function<?>) value)
+                : value;
+        entries.put(name, ObjectProperty.property(function, true));
+        return true;
+    }
+
+    @Override
+    public @NotNull Map<String, ObjectProperty> entries() {
+        return Collections.unmodifiableMap(entries);
+    }
+
+    private static final class PureFunction implements Function<Object> {
+        private final Function<Object> function;
+
+        @SuppressWarnings("unchecked")
+        PureFunction(final @NotNull Function<?> function) {
+            this.function = (Function<Object>) function;
+        }
+
+        @Override
+        public @Nullable Value evaluate(final @NotNull ExecutionContext<Object> context, final @NotNull Arguments arguments) {
+            return function.evaluate(context, arguments);
+        }
+
+        @Override
+        public boolean pure() {
+            return true;
+        }
     }
 }

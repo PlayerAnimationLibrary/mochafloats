@@ -30,13 +30,19 @@ import org.redlance.mocha.parser.ast.*;
 import org.redlance.mocha.runtime.binding.JavaFunction;
 import org.redlance.mocha.runtime.value.*;
 
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static java.util.Objects.requireNonNull;
 
 @ApiStatus.Internal
 public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>, ExecutionContext<T> {
+    // methods already reported by warnOnReflectiveFunctionUsage, each one is reported once
+    private static final Set<Method> REPORTED_REFLECTIVE_METHODS = ConcurrentHashMap.newKeySet();
+
     private static final List<Evaluator> BINARY_EVALUATORS = Arrays.asList(
             bool((a, b) -> a.eval() && b.eval()),
             bool((a, b) -> a.eval() || b.eval()),
@@ -300,8 +306,8 @@ public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>,
             return Value.nil();
         }
 
-        if (warnOnReflectiveFunctionUsage && function instanceof JavaFunction) {
-            final JavaFunction<?> javaFunction = (JavaFunction<?>) function;
+        if (warnOnReflectiveFunctionUsage && function instanceof JavaFunction<?> javaFunction
+                && javaFunction.reflective() && REPORTED_REFLECTIVE_METHODS.add(javaFunction.method())) {
             System.err.println("Warning: Reflective function usage detected for method: " + javaFunction.method());
         }
 
