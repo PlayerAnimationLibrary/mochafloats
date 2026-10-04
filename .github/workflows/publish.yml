@@ -1,0 +1,34 @@
+name: 'publish'
+on: [ 'workflow_dispatch' ]
+
+jobs:
+    publish:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Branch
+              uses: actions/checkout@v7
+
+            - name: Restore gradle.properties
+              shell: bash
+              env:
+                  MAVEN_TOKEN: ${{ secrets.MAVEN_TOKEN }}
+              run: |
+                  mkdir -p ~/.gradle/
+                  echo "GRADLE_USER_HOME=${HOME}/.gradle" >> $GITHUB_ENV
+                  echo "${MAVEN_TOKEN}" > ~/.gradle/gradle.properties
+
+            - name: Setup Java
+              uses: actions/setup-java@v6
+              with:
+                  distribution: microsoft
+                  java-version: 25
+
+            - name: Grant Execute Permission
+              run: chmod +x gradlew
+
+            # build runs the tests and the license checks, so a failing build is never published
+            - name: Build and Publish
+              run: |
+                  ./gradlew build publish
+              env:
+                  MAVEN_PASSWORD: ${{ secrets.REDLANCE_PASSWORD }}

@@ -8,6 +8,8 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-stdlib:2.4.20")
 }
 
+// Regenerates src/test/resources/expectations.txt with MolangJS (needs Node.js).
+// Run it after changing tests.txt; the tests use the committed file, and CI checks it's up to date.
 tasks.register('generateExpectations', Exec) {
     workingDir = rootProject.projectDir
     def nvmDir = file("${System.getenv('HOME')}/.nvm/versions/node")
@@ -17,8 +19,4 @@ tasks.register('generateExpectations', Exec) {
 
 tasks.named("compileTestKotlin") {
     enabled = true
-}
-
-tasks.named("test") {
-    dependsOn tasks.named("generateExpectations")
 }
