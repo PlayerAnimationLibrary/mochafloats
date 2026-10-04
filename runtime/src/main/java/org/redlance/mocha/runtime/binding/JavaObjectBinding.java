@@ -73,42 +73,39 @@ public final class JavaObjectBinding implements ObjectValue {
         final Map<String, ObjectProperty> backingProperties = backingObject != null ? backingObject.entries() : null;
 
         {
-            // check external bindings
-            final BindExternalFunction.Multiple annotation = clazz.getDeclaredAnnotation(BindExternalFunction.Multiple.class);
-            if (annotation != null) {
-                for (final BindExternalFunction externalFunctionBinding : annotation.value()) {
-                    final Class<?> atClass = externalFunctionBinding.at();
-                    final String methodName = externalFunctionBinding.name();
-                    final Class<?>[] parameterTypes = externalFunctionBinding.args();
+            // check external bindings, a single annotation isn't wrapped in BindExternalFunction.Multiple
+            for (final BindExternalFunction externalFunctionBinding : clazz.getDeclaredAnnotationsByType(BindExternalFunction.class)) {
+                final Class<?> atClass = externalFunctionBinding.at();
+                final String methodName = externalFunctionBinding.name();
+                final Class<?>[] parameterTypes = externalFunctionBinding.args();
 
-                    final Method method;
-                    try {
-                        method = atClass.getDeclaredMethod(methodName, parameterTypes);
-                    } catch (final NoSuchMethodException e) {
-                        throw new IllegalArgumentException("No method found with name " + methodName
-                                + " and parameter types " + Arrays.toString(parameterTypes) + ". Declared as"
-                                + " external binding for " + clazz, e);
-                    }
-
-                    final String functionName;
-                    {
-                        final String alias = externalFunctionBinding.as();
-                        if (alias.isEmpty()) {
-                            functionName = methodName;
-                        } else {
-                            functionName = alias;
-                        }
-                    }
-
-                    final Function<?> backing = getBacking(backingProperties, functionName, Function.class);
-                    final boolean pure = externalFunctionBinding.pure();
-
-                    if (backing != null && backing.pure() != pure) {
-                        throw new IllegalStateException("Different 'pure' values for interface and Java functions for function " + functionName);
-                    }
-
-                    object.entries.put(functionName, new JavaFunction<>(instance, method, backing, pure));
+                final Method method;
+                try {
+                    method = atClass.getDeclaredMethod(methodName, parameterTypes);
+                } catch (final NoSuchMethodException e) {
+                    throw new IllegalArgumentException("No method found with name " + methodName
+                            + " and parameter types " + Arrays.toString(parameterTypes) + ". Declared as"
+                            + " external binding for " + clazz, e);
                 }
+
+                final String functionName;
+                {
+                    final String alias = externalFunctionBinding.as();
+                    if (alias.isEmpty()) {
+                        functionName = methodName;
+                    } else {
+                        functionName = alias;
+                    }
+                }
+
+                final Function<?> backing = getBacking(backingProperties, functionName, Function.class);
+                final boolean pure = externalFunctionBinding.pure();
+
+                if (backing != null && backing.pure() != pure) {
+                    throw new IllegalStateException("Different 'pure' values for interface and Java functions for function " + functionName);
+                }
+
+                object.entries.put(functionName, new JavaFunction<>(instance, method, backing, pure));
             }
         }
 

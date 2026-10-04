@@ -311,7 +311,9 @@ public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>,
             System.err.println("Warning: Reflective function usage detected for method: " + javaFunction.method());
         }
 
-        return ((Function<T>) function).evaluate(this, args);
+        // a function may return null for nothing, which must read as zero like Value.nil()
+        final Value result = ((Function<T>) function).evaluate(this, args);
+        return result == null ? Value.nil() : result;
     }
 
     @Override
