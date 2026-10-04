@@ -75,6 +75,18 @@ public final class StatementExpression implements Expression {
         return op.toString();
     }
 
+    @Override
+    public boolean equals(final Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        return op == ((StatementExpression) o).op;
+    }
+
+    @Override
+    public int hashCode() {
+        return op.hashCode();
+    }
+
     /**
      * Enum containing all the possible operations/types
      * of statement expressions.
