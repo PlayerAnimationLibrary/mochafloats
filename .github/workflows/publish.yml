@@ -29,6 +29,10 @@ jobs:
             # build runs the tests and the license checks, so a failing build is never published
             - name: Build and Publish
               run: |
-                  ./gradlew build publish
+                  ./gradlew build publish publishAggregationToCentralPortal
               env:
                   MAVEN_PASSWORD: ${{ secrets.REDLANCE_PASSWORD }}
+                  CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+                  CENTRAL_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+                  SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+                  SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}

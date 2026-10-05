@@ -30,6 +30,7 @@ allprojects {
 subprojects {
     apply plugin: "java-library"
     apply plugin: "maven-publish"
+    apply plugin: "signing"
 
     dependencies {
         compileOnlyApi("org.jetbrains:annotations:26.1.0")
@@ -105,14 +106,23 @@ subprojects {
                     }
 
                     scm {
-                        connection = "scm:git:github.com/PlayerAnimationLibrary/mochafloats.git"
-                        developerConnection = "scm:git:github.com/PlayerAnimationLibrary/mochafloats.git"
-                        url = "https://github.com/PlayerAnimationLibrary/mochafloats.git"
+                        connection = "scm:git:https://github.com/PlayerAnimationLibrary/mochafloats.git"
+                        developerConnection = "scm:git:ssh://git@github.com/PlayerAnimationLibrary/mochafloats.git"
+                        url = "https://github.com/PlayerAnimationLibrary/mochafloats"
                     }
                 }
 
                 from components.java
             }
+        }
+    }
+
+    // Maven Central rejects unsigned artifacts; local builds without a key stay unsigned
+    signing {
+        def signingKey = System.getenv("SIGNING_KEY")
+        if (signingKey != null) {
+            useInMemoryPgpKeys(signingKey, System.getenv("SIGNING_PASSWORD"))
+            sign publishing.publications.maven
         }
     }
 }
