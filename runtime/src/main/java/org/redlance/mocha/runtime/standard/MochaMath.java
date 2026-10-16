@@ -23,6 +23,7 @@
  */
 package org.redlance.mocha.runtime.standard;
 
+import com.google.j2objc.annotations.J2ObjCIncompatible;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.redlance.mocha.runtime.ExecutionContext;
@@ -60,6 +61,14 @@ public final class MochaMath implements ObjectValue {
     private static final double RADIAN = Math.toRadians(1);
 
     private static final Random RANDOM = new Random();
+    private static final BoundedRandom BOUNDED_RANDOM = new BoundedRandom() {
+        // j2objc strips this override, its Random predates RandomGenerator and has no nextLong(bound)
+        @J2ObjCIncompatible
+        @Override
+        public long nextLong(final long bound) {
+            return RANDOM.nextLong(bound);
+        }
+    };
 
     // the functions below back the Java bindings of this class, and
     // JavaObjectBinding.of requires a backing function to be exactly as pure as its binding
@@ -283,7 +292,7 @@ public final class MochaMath implements ObjectValue {
     public static int randomInteger(final float min, final float max) {
         final int low = (int) Math.min(min, max);
         final int high = (int) Math.max(min, max);
-        return (int) (low + RANDOM.nextLong((long) high - low + 1));
+        return (int) (low + BOUNDED_RANDOM.nextLong((long) high - low + 1));
     }
 
     @Binding(value = "sign", pure = true)
@@ -358,6 +367,22 @@ public final class MochaMath implements ObjectValue {
         @Override
         public boolean pure() {
             return true;
+        }
+    }
+
+    // an override, not an overload: j2objc drops what a --dead-code-report names, and a report
+    // made from the JVM bytecode would name a method that only j2objc calls
+    private interface BoundedRandom {
+        // what j2objc is left with: draws from nextLong(), rejecting the top values
+        // that would make the lower results more likely
+        default long nextLong(final long bound) {
+            long bits;
+            long value;
+            do {
+                bits = RANDOM.nextLong() >>> 1;
+                value = bits % bound;
+            } while (bits - value + (bound - 1) < 0);
+            return value;
         }
     }
 }

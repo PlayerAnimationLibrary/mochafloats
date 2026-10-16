@@ -23,6 +23,7 @@
  */
 package org.redlance.mocha.runtime.binding;
 
+import com.google.j2objc.annotations.J2ObjCIncompatible;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.redlance.mocha.runtime.ExecutionContext;
@@ -47,6 +48,23 @@ import java.util.List;
 import static java.util.Objects.requireNonNull;
 
 final class ReflectiveFunction<T> implements Function<T> {
+    private static final Handles HANDLES = new Handles() {
+        // j2objc strips this override, its java.lang.invoke stubs have no asSpreader
+        @J2ObjCIncompatible
+        @Override
+        public @NotNull MethodHandle spreader(final @Nullable Object object, final @NotNull Method method) {
+            try {
+                MethodHandle handle = MethodHandles.lookup().unreflect(method).asFixedArity();
+                if (object != null) handle = handle.bindTo(object);
+                // adapt once to (Object[])Object, invokeWithArguments would build this spreader on every call
+                return handle.asType(handle.type().generic())
+                        .asSpreader(Object[].class, handle.type().parameterCount());
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    };
+
     private final Object object;
     private final Method method;
     private final MethodHandle mh;
@@ -54,21 +72,7 @@ final class ReflectiveFunction<T> implements Function<T> {
     ReflectiveFunction(final @Nullable Object object, final @NotNull Method method) {
         this.object = object;
         this.method = requireNonNull(method, "method");
-        // j2objc emulates java.lang.invoke with stubs that return null, so there evaluate() invokes the method reflectively.
-        final MethodHandles.Lookup lookup = MethodHandles.lookup();
-        if (lookup == null) {
-            this.mh = null;
-            return;
-        }
-        try {
-            MethodHandle handle = lookup.unreflect(method).asFixedArity();
-            if (object != null) handle = handle.bindTo(object);
-            // adapt once to (Object[])Object, invokeWithArguments would build this spreader on every call
-            this.mh = handle.asType(handle.type().generic())
-                    .asSpreader(Object[].class, handle.type().parameterCount());
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
+        this.mh = HANDLES.spreader(object, method);
     }
 
     static @NotNull Value of(final @Nullable Object any) {
@@ -185,6 +189,16 @@ final class ReflectiveFunction<T> implements Function<T> {
             return of(mh != null ? (Object) mh.invokeExact(values) : method.invoke(object, values));
         } catch (final Throwable throwable) {
             throw new RuntimeException(throwable);
+        }
+    }
+
+    // an override, not an overload: j2objc drops what a --dead-code-report names, and a report
+    // made from the JVM bytecode would name a method that only j2objc calls
+    private interface Handles {
+        // what j2objc is left with: it emulates java.lang.invoke with stubs that return null,
+        // so there evaluate() invokes the method reflectively
+        default @Nullable MethodHandle spreader(final @Nullable Object object, final @NotNull Method method) {
+            return null;
         }
     }
 }
