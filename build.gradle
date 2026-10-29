@@ -3,7 +3,7 @@ plugins {
     id "java-library"
     id "maven-publish"
     id("net.neoforged.licenser") version "0.7.5" apply false
-    id("me.champeau.jmh") version "0.7.3"
+    id("me.champeau.jmh") version "0.7.4"
 }
 
 allprojects {
