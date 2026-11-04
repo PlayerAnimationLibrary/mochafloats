@@ -83,6 +83,22 @@ public non-sealed interface ObjectValue extends Value {
         set(name, (Function<?>) (ctx, args) -> NumberValue.of(function.apply(args.next().eval().getAsNumber(), args.next().eval().getAsNumber(), args.next().eval().getAsNumber())));
     }
 
+    /**
+     * Like {@link #setFunction(String, FloatFunction3)}, but charges the
+     * execution context's step budget by the first argument before calling.
+     * Use it for a function whose body iterates that many times (such as
+     * {@code math.die_roll}), so it cannot run past the budget.
+     */
+    default void setIterationFunction(final @NotNull String name, final @NotNull ObjectValue.FloatFunction3 function) {
+        set(name, (Function<?>) (ctx, args) -> {
+            final float count = args.next().eval().getAsNumber();
+            ctx.charge((long) count); // reject a huge count before the first iteration
+            final float n2 = args.next().eval().getAsNumber();
+            final float n3 = args.next().eval().getAsNumber();
+            return NumberValue.of(function.apply(count, n2, n3));
+        });
+    }
+
     interface FloatFunction {
         float apply();
     }

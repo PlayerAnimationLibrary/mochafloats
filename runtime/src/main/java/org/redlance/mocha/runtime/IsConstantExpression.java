@@ -165,8 +165,8 @@ public final class IsConstantExpression implements ExpressionVisitor<@NotNull Bo
 
         final Expression functionExpr = expression.function();
 
-        // check for built-in functions, their blocks usually assign variables,
-        // so evaluating them ahead of time would lose those assignments
+        // check for built-in functions, they always evaluate to zero, and evaluating
+        // them ahead of time would run their block as many times as asked, without a bound
         if (functionExpr instanceof IdentifierExpression) {
             final String name = ((IdentifierExpression) functionExpr).name();
             if (name.equalsIgnoreCase("loop") || name.equalsIgnoreCase("for_each")) {

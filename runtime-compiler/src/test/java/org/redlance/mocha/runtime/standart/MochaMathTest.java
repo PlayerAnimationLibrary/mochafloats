@@ -25,6 +25,7 @@ package org.redlance.mocha.runtime.standart;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.redlance.mocha.MochaAssertions;
 import org.redlance.mocha.runtime.MochaEngine;
 
 public class MochaMathTest {
@@ -32,5 +33,14 @@ public class MochaMathTest {
     void test() {
         final MochaEngine<?> engine = MochaEngine.createStandard();
         Assertions.assertEquals(Math.abs(-10F), engine.interpreter().eval("math.abs(-10);"));
+    }
+
+    @Test
+    void die_roll_still_compiles() {
+        // the budget charge was added to die_roll's interpreter binding only; the static
+        // method it compiles to is unchanged, so it must still compile. Each roll between
+        // 1 and 1 is exactly 1, so the result is the roll count on both paths.
+        MochaAssertions.assertEvaluatesAndCompiles(5, "math.die_roll(5, 1, 1)");
+        MochaAssertions.assertEvaluatesAndCompiles(5, "math.die_roll_integer(5, 1, 1)");
     }
 }

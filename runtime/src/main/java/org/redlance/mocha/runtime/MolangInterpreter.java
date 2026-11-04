@@ -66,6 +66,8 @@ public final class MolangInterpreter<T> {
     private final Scope scope;
     private Consumer<@NotNull ParseException> parseExceptionHandler;
     private boolean warnOnReflectiveFunctionUsage;
+    private long evaluationLimit;
+    private Consumer<@NotNull MolangEvaluationLimitException> evaluationLimitHandler;
 
     public MolangInterpreter(final @Nullable T entity, final @NotNull Scope scope) {
         this.entity = entity;
@@ -159,17 +161,25 @@ public final class MolangInterpreter<T> {
         if (scopeConsumer != null && !local.readOnly()) scopeConsumer.accept(local);
         local.readOnly(true);
 
-        final ExpressionInterpreter<T> evaluator = new ExpressionInterpreter<>(entity, local);
+        final EvaluationBudget budget = evaluationLimit > 0 ? new EvaluationBudget(evaluationLimit) : EvaluationBudget.UNLIMITED;
+        final ExpressionInterpreter<T> evaluator = new ExpressionInterpreter<>(entity, local, budget);
         evaluator.warnOnReflectiveFunctionUsage(warnOnReflectiveFunctionUsage);
         Value lastResult = NumberValue.zero();
 
-        for (final Expression expression : expressions) {
-            lastResult = expression.visit(evaluator);
-            final Value returnValue = evaluator.popReturnValue();
-            if (returnValue != null) {
-                lastResult = returnValue;
-                break;
+        try {
+            for (final Expression expression : expressions) {
+                lastResult = expression.visit(evaluator);
+                final Value returnValue = evaluator.popReturnValue();
+                if (returnValue != null) {
+                    lastResult = returnValue;
+                    break;
+                }
             }
+        } catch (final MolangEvaluationLimitException limit) {
+            if (evaluationLimitHandler != null) {
+                evaluationLimitHandler.accept(limit);
+            }
+            return 0F;
         }
 
         return lastResult == null ? 0F : lastResult.getAsNumber();
@@ -389,6 +399,59 @@ public final class MolangInterpreter<T> {
     @Contract("_ -> this")
     public @NotNull MolangInterpreter<T> handleParseExceptions(final @Nullable Consumer<@NotNull ParseException> exceptionHandler) {
         this.parseExceptionHandler = exceptionHandler;
+        return this;
+    }
+
+    /**
+     * The maximum number of steps (loop and for_each iterations, and block
+     * executions) a single {@link #eval} may run, or a non-positive value for
+     * no limit.
+     *
+     * @since 6.2.0
+     */
+    public long evaluationLimit() {
+        return evaluationLimit;
+    }
+
+    /**
+     * Limits how many steps (loop and for_each iterations, and block
+     * executions) a single {@link #eval} may run. When the limit is exceeded
+     * the evaluation is aborted, a {@link MolangEvaluationLimitException} is
+     * passed to the handler set with {@link #handleEvaluationLimit(Consumer)},
+     * and {@code eval} returns {@code 0}.
+     *
+     * <p>Use it to bound the repetition in untrusted Molang, such as an
+     * animation received over the network: loops, for_each and nested blocks.
+     * A legitimate script runs very few steps, so a generous limit (tens of
+     * thousands) stops an attack without affecting normal use. It bounds the
+     * repetition the interpreter drives; it does not limit the work done inside
+     * a single native binding call.</p>
+     *
+     * <p>By default this is {@code 0}. A non-positive value means no limit.</p>
+     *
+     * @return This interpreter instance.
+     * @since 6.2.0
+     */
+    @Contract("_ -> this")
+    public @NotNull MolangInterpreter<T> evaluationLimit(final long evaluationLimit) {
+        this.evaluationLimit = evaluationLimit;
+        return this;
+    }
+
+    /**
+     * Sets the handler called when an evaluation is aborted for exceeding the
+     * limit set with {@link #evaluationLimit(long)}. Usually useful for
+     * logging/debugging purposes.
+     *
+     * <p>By default this is null and an aborted evaluation returns {@code 0}
+     * without reporting.</p>
+     *
+     * @return This interpreter instance.
+     * @since 6.2.0
+     */
+    @Contract("_ -> this")
+    public @NotNull MolangInterpreter<T> handleEvaluationLimit(final @Nullable Consumer<@NotNull MolangEvaluationLimitException> handler) {
+        this.evaluationLimitHandler = handler;
         return this;
     }
 

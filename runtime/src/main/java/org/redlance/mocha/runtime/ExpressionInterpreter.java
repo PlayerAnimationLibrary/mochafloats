@@ -119,14 +119,20 @@ public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>,
 
     private final T entity;
     private final Scope scope;
+    private final @NotNull EvaluationBudget budget;
     private @Nullable Object flag;
     private @Nullable Value returnValue;
 
     private boolean warnOnReflectiveFunctionUsage;
 
     public ExpressionInterpreter(final @Nullable T entity, final @NotNull Scope scope) {
+        this(entity, scope, EvaluationBudget.UNLIMITED);
+    }
+
+    ExpressionInterpreter(final @Nullable T entity, final @NotNull Scope scope, final @NotNull EvaluationBudget budget) {
         this.entity = entity;
         this.scope = requireNonNull(scope, "scope");
+        this.budget = budget;
     }
 
     private static Evaluator bool(BooleanOperator op) {
@@ -182,18 +188,23 @@ public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>,
     }
 
     @Override
+    public void charge(final long steps) {
+        budget.charge(steps);
+    }
+
+    @Override
     public @NotNull Value eval(final @NotNull Expression expression) {
         return expression.visit(this);
     }
 
     public <R> @NotNull ExpressionInterpreter<R> createChild(final @Nullable R entity) {
-        return new ExpressionInterpreter<>(entity, this.scope);
+        return new ExpressionInterpreter<>(entity, this.scope, this.budget);
     }
 
     public @NotNull ExpressionInterpreter<T> createChild() {
         // Note that it will have its own returnValue, but same bindings
         // (Should we create new bindings?)
-        return new ExpressionInterpreter<>(this.entity, this.scope);
+        return new ExpressionInterpreter<>(this.entity, this.scope, this.budget);
     }
 
     public @NotNull Scope bindings() {
@@ -251,6 +262,7 @@ public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>,
                 if (expr instanceof Function) {
                     final Function<T> callable = (Function<T>) expr;
                     for (int i = 0; i < n; i++) {
+                        budget.step();
                         final ExpressionInterpreter<T> evaluatorThisCall = createChild();
                         callable.evaluate(evaluatorThisCall);
                         if (evaluatorThisCall.flag() == StatementExpression.Op.BREAK) {
@@ -293,6 +305,7 @@ public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>,
                 if (expr instanceof Function) {
                     final Function callable = (Function) expr;
                     for (final Value val : arrayIterable) {
+                        budget.step();
                         // set 'val' as current value
                         // eval (objectExpr.propertyName = val)
                         final Value evaluatedObjectValue = this.eval(objectExpr);
@@ -334,6 +347,9 @@ public final class ExpressionInterpreter<T> implements ExpressionVisitor<Value>,
     public @NotNull Value visitExecutionScope(final @NotNull ExecutionScopeExpression executionScope) {
         List<Expression> expressions = executionScope.expressions();
         return (Function<T>) (context, arguments) -> {
+            // one step per block execution, charged to the running evaluation: a block can be
+            // stored in a variable and called from a later eval, which has its own budget
+            context.charge(1);
             for (Expression expression : expressions) {
                 // eval expression, ignore result
                 context.eval(expression);

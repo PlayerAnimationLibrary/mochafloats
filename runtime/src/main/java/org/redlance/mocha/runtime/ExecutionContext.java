@@ -36,4 +36,15 @@ public interface ExecutionContext<T> {
     @Nullable Object flag();
 
     void flag(final @Nullable Object flag);
+
+    /**
+     * Charges this evaluation's step budget, if one is set, by the given number
+     * of steps, and aborts the evaluation when it is exceeded. A binding whose
+     * body iterates (such as {@code math.die_roll}) charges the iteration count
+     * so it cannot run past the budget. Does nothing by default.
+     *
+     * @since 6.2.0
+     */
+    default void charge(final long steps) {
+    }
 }

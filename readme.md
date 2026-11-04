@@ -4,7 +4,8 @@
 [![MIT License](https://img.shields.io/badge/license-MIT-blue)](license.txt)
 [![Discord](https://img.shields.io/badge/discord-PlayerAnimationLibrary-5865F2)](https://discord.com/invite/PSW2t4Ujm6)
 
-`mochafloats` is a Molang lexer, parser, interpreter and JVM bytecode compiler for Java 24+.
+`mochafloats` is a Molang lexer, parser, interpreter and JVM bytecode compiler. The lexer, parser
+and interpreter run on Java 21+; the bytecode compiler needs Java 24+.
 Molang is the small expression language Minecraft Bedrock uses for data-driven values; pretty much
 everything in it evaluates to a number.
 

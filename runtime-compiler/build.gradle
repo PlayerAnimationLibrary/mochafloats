@@ -8,6 +8,11 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-stdlib:2.4.21")
 }
 
+// the compiler uses the ClassFile API, which is Java 24+
+tasks.named("compileJava") {
+    options.release = 24
+}
+
 // Regenerates src/test/resources/expectations.txt with MolangJS (needs Node.js).
 // Run it after changing tests.txt; the tests use the committed file, and CI checks it's up to date.
 tasks.register('generateExpectations', Exec) {

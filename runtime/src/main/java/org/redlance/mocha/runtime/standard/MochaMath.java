@@ -95,8 +95,8 @@ public final class MochaMath implements ObjectValue {
         setFunction("clamp", MochaMath::clamp);
         setFunction("copy_sign", MochaMath::copySign);
         setFunction("cos", MochaMath::cos);
-        setFunction("die_roll", MochaMath::dieRoll);
-        setFunction("die_roll_integer", MochaMath::dieRollInteger);
+        setIterationFunction("die_roll", MochaMath::dieRoll);
+        setIterationFunction("die_roll_integer", MochaMath::dieRollInteger);
         setFunction("exp", MochaMath::exp);
         setFunction("floor", MochaMath::floor);
         setFunction("hermite_blend", MochaMath::hermiteBlend);
@@ -213,7 +213,7 @@ public final class MochaMath implements ObjectValue {
     @Binding("die_roll")
     public static float dieRoll(final float amount, final float low, final float high) {
         float result = 0;
-        for (int i = 0; i < amount; i++) {
+        for (long i = 0; i < amount; i++) {
             result += random(low, high);
         }
         return result;
@@ -223,7 +223,7 @@ public final class MochaMath implements ObjectValue {
     @Binding("die_roll_integer")
     public static float dieRollInteger(final float amount, final float low, final float high) {
         int result = 0;
-        for (int i = 0; i < amount; i++) {
+        for (long i = 0; i < amount; i++) {
             result += randomInteger(low, high);
         }
         return result;
@@ -269,10 +269,11 @@ public final class MochaMath implements ObjectValue {
 
     @Binding(value = "min_angle", pure = true)
     public static float minAngle(float angle) {
-        while (angle > 180)
-            angle -= 360;
-        while (angle < -180)
-            angle += 360;
+        // modulo, not a loop: for a large angle its float ULP can exceed 360, so
+        // subtracting 360 would never change it and the loop would never end
+        angle %= 360;
+        if (angle > 180) angle -= 360;
+        else if (angle < -180) angle += 360;
         return angle;
     }
 

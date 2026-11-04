@@ -46,8 +46,9 @@ subprojects {
     }
 
     tasks.named("compileJava") {
-        sourceCompatibility = "24"
-        targetCompatibility = "24"
+        // the interpreter stack (lexer, parser, runtime) runs on Java 21+ so older
+        // Minecraft versions can use it; runtime-compiler overrides this back to 24
+        options.release = 21
     }
 
     tasks.named("javadoc") {

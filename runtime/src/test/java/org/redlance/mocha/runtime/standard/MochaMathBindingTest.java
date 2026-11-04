@@ -110,6 +110,19 @@ class MochaMathBindingTest {
     }
 
     @Test
+    void min_angle_normalizes_and_terminates() {
+        final MolangInterpreter<?> molang = MolangInterpreter.standard();
+        assertEquals(180F, molang.eval("math.min_angle(180)"));
+        assertEquals(-180F, molang.eval("math.min_angle(-180)"));
+        assertEquals(-170F, molang.eval("math.min_angle(190)"));
+        assertEquals(10F, molang.eval("math.min_angle(370)"));
+        assertEquals(170F, molang.eval("math.min_angle(-190)"));
+        // this angle's float ULP exceeds 360, so the old while-loop never terminated
+        final float big = molang.eval("math.min_angle(100000000000)");
+        assertTrue(big >= -180F && big <= 180F, () -> "math.min_angle(1e11) = " + big);
+    }
+
+    @Test
     void standalone_object() {
         final MochaMath math = new MochaMath();
         assertEquals(NumberValue.of(MochaMath.PI), math.get("PI"));
