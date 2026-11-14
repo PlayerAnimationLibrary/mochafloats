@@ -28,6 +28,7 @@ import io.netty.buffer.Unpooled;
 import org.junit.jupiter.api.Test;
 import org.redlance.mocha.parser.ast.Expression;
 import org.redlance.mocha.parser.util.ExprBytesUtils;
+import org.redlance.mocha.parser.util.network.VarIntUtils;
 
 import java.io.IOException;
 import java.util.List;
@@ -73,5 +74,12 @@ class ExprBytesTest {
         buf.writeByte(8); // BinaryExpression
         buf.writeByte(200); // no such operator
         assertThrows(IllegalArgumentException.class, () -> ExprBytesUtils.readExpression(buf));
+    }
+
+    @Test
+    void count_past_the_data() {
+        final ByteBuf buf = Unpooled.buffer();
+        VarIntUtils.writeVarInt(buf, Integer.MAX_VALUE); // more expressions than any list can hold
+        assertThrows(IndexOutOfBoundsException.class, () -> ExprBytesUtils.readExpressions(buf));
     }
 }

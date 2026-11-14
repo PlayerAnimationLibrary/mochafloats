@@ -34,8 +34,22 @@ import java.util.function.BiConsumer;
 import java.util.function.Function;
 
 public class ProtocolUtils {
+    /**
+     * A count from the packet, which cannot be larger than the bytes left in it, as every entry takes at least one.
+     */
+    public static int checkCount(ByteBuf buf, int count) {
+        if (count < 0 || count > buf.readableBytes()) {
+            throw new IndexOutOfBoundsException("Count " + count + " is over the " + buf.readableBytes() + " bytes left");
+        }
+        return count;
+    }
+
+    public static int readCount(ByteBuf buf) {
+        return checkCount(buf, VarIntUtils.readVarInt(buf));
+    }
+
     public static <T> List<T> readList(ByteBuf buf, Function<ByteBuf, T> reader) {
-        int count = VarIntUtils.readVarInt(buf);
+        int count = readCount(buf);
         List<T> list = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             list.add(reader.apply(buf));
